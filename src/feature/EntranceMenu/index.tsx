@@ -2,6 +2,7 @@
 
 import { PlayerNameEditor } from './PlayerNameEditor';
 import { DeckSelector } from './DeckSelector';
+import { ServerSelector } from './ServerSelector';
 
 export const EntranceMenu = () => {
   return (
@@ -11,6 +12,7 @@ export const EntranceMenu = () => {
       </div>
       <PlayerNameEditor />
       <DeckSelector />
+      <ServerSelector />
     </div>
   );
 };

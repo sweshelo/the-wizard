@@ -161,4 +161,18 @@ export const LocalStorageHelper = {
 
     return LocalStorageHelper.getDeckById(mainDeckId);
   },
+
+  serverAddress: (): string | null => {
+    // Check if code is running in a browser environment
+    if (typeof window === 'undefined') {
+      return '';
+    }
+
+    const address = window.localStorage.getItem('serverAddress');
+    return address;
+  },
+
+  setServerAddress: (address: string) => {
+    window.localStorage.setItem('serverAddress', address);
+  },
 };
