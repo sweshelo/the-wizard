@@ -1,7 +1,7 @@
-'use client';
-
 import { PlayerNameEditor } from './PlayerNameEditor';
 import { DeckSelector } from './DeckSelector';
+import { AuthStatus } from './AuthStatus';
+import { MigrationBanner } from './MigrationBanner';
 
 export const EntranceMenu = () => {
   return (
@@ -9,6 +9,8 @@ export const EntranceMenu = () => {
       <div className="text-center">
         <h2 className="text-2xl font-bold text-black mb-4">ゲーム設定</h2>
       </div>
+      <AuthStatus />
+      <MigrationBanner />
       <PlayerNameEditor />
       <DeckSelector />
     </div>

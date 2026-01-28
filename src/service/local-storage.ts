@@ -1,12 +1,8 @@
 import { nanoid } from 'nanoid';
+import type { DeckData } from '@/type/deck';
 
-// Deck type definition
-export type DeckData = {
-  id: string;
-  title: string;
-  cards: string[];
-  jokers?: string[]; // JOKER IDの配列（最大2枚）
-};
+// Re-export DeckData from centralized type definition
+export type { DeckData } from '@/type/deck';
 
 export const LocalStorageHelper = {
   playerName: (): string => {

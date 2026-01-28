@@ -1,32 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { LocalStorageHelper, DeckData } from '@/service/local-storage';
+import { useState } from 'react';
+import { useDeck } from '@/hooks/deck';
 import { DeckPreview } from '@/feature/DeckBuilder/DeckPreview';
 import { ICard } from '@/submodule/suit/types';
 import catalog from '@/submodule/suit/catalog/catalog';
 
 export const DeckSelector = () => {
-  const [mainDeck, setMainDeck] = useState<DeckData | null>(null);
-  const [allDecks, setAllDecks] = useState<DeckData[]>([]);
+  const { decks, mainDeck, isLoading, setMainDeck } = useDeck();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isDeckListOpen, setIsDeckListOpen] = useState(false);
 
-  useEffect(() => {
-    loadDeckData();
-  }, []);
-
-  const loadDeckData = () => {
-    const currentMainDeck = LocalStorageHelper.getMainDeck();
-    const savedDecks = LocalStorageHelper.getAllDecks();
-    setMainDeck(currentMainDeck);
-    setAllDecks(savedDecks);
-  };
-
-  const handleSetMainDeck = (deckId: string) => {
-    LocalStorageHelper.setMainDeckId(deckId);
-    loadDeckData();
-    setIsDeckListOpen(false);
+  const handleSetMainDeck = async (deckId: string) => {
+    try {
+      await setMainDeck(deckId);
+      setIsDeckListOpen(false);
+    } catch (error) {
+      console.error('メインデッキ設定エラー:', error);
+    }
   };
 
   const handlePreview = () => {
@@ -107,6 +98,19 @@ export const DeckSelector = () => {
 
   const status = getDeckStatus();
 
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800 p-4 rounded-lg animate-pulse">
+        <div className="h-6 bg-gray-700 rounded w-1/3 mb-3"></div>
+        <div className="h-20 bg-gray-700 rounded mb-4"></div>
+        <div className="flex space-x-3">
+          <div className="h-10 bg-gray-700 rounded w-24"></div>
+          <div className="h-10 bg-gray-700 rounded w-24"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-800 p-4 rounded-lg">
       <h3 className="text-lg font-semibold text-white mb-3">デッキ設定</h3>
@@ -156,11 +160,11 @@ export const DeckSelector = () => {
           <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4 max-h-96 overflow-y-auto">
             <h4 className="text-lg font-semibold text-white mb-4">デッキを選択</h4>
 
-            {allDecks.length === 0 ? (
+            {decks.length === 0 ? (
               <p className="text-gray-400 text-center py-4">保存されたデッキがありません</p>
             ) : (
               <div className="space-y-2">
-                {allDecks.map(deck => (
+                {decks.map(deck => (
                   <div
                     key={deck.id}
                     className={`p-3 rounded-md border cursor-pointer transition-colors ${

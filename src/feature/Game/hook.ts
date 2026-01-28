@@ -1,3 +1,4 @@
+import { useAuth } from '@/hooks/auth/hooks';
 import { STARTER_DECK, STARTER_JOKERS } from '@/constants/deck';
 import { useHandler } from '@/hooks/game/handler';
 import { useWebSocket } from '@/hooks/websocket/hooks';
@@ -9,10 +10,16 @@ interface Props {
   id: string;
 }
 export const useGameComponentHook = ({ id }: Props) => {
+  const { user } = useAuth();
   const { websocket } = useWebSocket();
   const [isConnected, setConnected] = useState<boolean>(websocket?.isConnected() ?? false);
   const isJoined = useRef(false);
   const { handle } = useHandler();
+
+  // Discordログイン中はDiscord名・SupabaseユーザーIDを使用、未ログインはlocalStorageを使用
+  const playerName =
+    user?.user_metadata?.full_name || user?.user_metadata?.name || LocalStorageHelper.playerName();
+  const playerId = user?.id || LocalStorageHelper.playerId();
 
   // ルーム参加処理
   useEffect(() => {
@@ -31,15 +38,15 @@ export const useGameComponentHook = ({ id }: Props) => {
           type: 'PlayerEntry',
           roomId: id,
           player: {
-            name: LocalStorageHelper.playerName(),
-            id: LocalStorageHelper.playerId(),
+            name: playerName,
+            id: playerId,
             deck: deck?.cards ?? STARTER_DECK,
           },
           jokersOwned: deck?.jokers ?? STARTER_JOKERS,
         },
       } satisfies Message<PlayerEntryPayload>);
     }
-  }, [id, websocket, isConnected, handle]);
+  }, [id, websocket, isConnected, handle, playerName, playerId]);
 
   useEffect(() => {
     if (websocket) {

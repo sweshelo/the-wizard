@@ -51,10 +51,10 @@ export const DeckPreview = ({ deck, onClose }: DeckPreviewProps) => {
               {deck.joker.map((joker, index) => {
                 return (
                   <div
-                    key={joker.id}
+                    key={joker.catalogId ?? joker.id}
                     className={`w-90 border ${JOKER_TABLE[index].color} text-bold px-5 py-1`}
                   >
-                    {JOKER_TABLE[index].suffix}: {master.get(joker.id)?.id}
+                    {JOKER_TABLE[index].suffix}: {master.get(joker.catalogId ?? joker.id)?.id}
                   </div>
                 );
               })}

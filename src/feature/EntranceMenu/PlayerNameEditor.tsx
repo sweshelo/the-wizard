@@ -2,11 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { LocalStorageHelper } from '@/service/local-storage';
+import { useAuth } from '@/hooks/auth/hooks';
 
 export const PlayerNameEditor = () => {
+  const { user } = useAuth();
   const [playerName, setPlayerName] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState('');
+
+  // Discordログイン中かどうか
+  const isDiscordLoggedIn = !!user;
+  const discordName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.user_metadata?.preferred_username;
 
   useEffect(() => {
     const currentName = LocalStorageHelper.playerName();
@@ -43,6 +52,18 @@ export const PlayerNameEditor = () => {
     }
   };
 
+  // Discordログイン中は編集不可で表示のみ
+  if (isDiscordLoggedIn && discordName) {
+    return (
+      <div className="bg-gray-800 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold text-white mb-3">プレイヤー名</h3>
+        <div className="text-white text-lg">{discordName}</div>
+        <div className="text-sm text-gray-400 mt-1">Discordアカウントから取得</div>
+      </div>
+    );
+  }
+
+  // 未ログイン時は従来の編集可能UI
   return (
     <div className="bg-gray-800 p-4 rounded-lg">
       <h3 className="text-lg font-semibold text-white mb-3">プレイヤー名</h3>
