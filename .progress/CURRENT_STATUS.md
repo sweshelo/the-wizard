@@ -5,7 +5,7 @@
 ## 全体進捗
 
 ```
-Phase 1: 基盤構築 (MVP)    [░░░░░░░░░░] 0%  NOT_STARTED
+Phase 1: 基盤構築 (MVP)    [███░░░░░░░] 30%  IN_PROGRESS
 Phase 2: 推論改善          [░░░░░░░░░░] 0%  NOT_STARTED
 Phase 3: 高度な機能        [░░░░░░░░░░] 0%  NOT_STARTED
 Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
@@ -17,15 +17,21 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 
 ## 次に着手すべきタスク
 
-| タスクID | タスク名 | 優先度 | 前提条件 |
-|----------|----------|--------|----------|
-| 1.0 | テスト環境構築 | P0 | なし |
+| タスクID | タスク名                | 優先度 | 前提条件   |
+| -------- | ----------------------- | ------ | ---------- |
+| 1.2      | WebSocketインターセプト | P0     | 1.1 (完了) |
+| 1.4      | ヒューリスティック      | P0     | 1.1 (完了) |
+| 1.7      | Chat UI基本実装         | P1     | 1.1 (完了) |
+| 1.8      | 盤面複雑性評価          | P1     | 1.3 (完了) |
 
 ## 最近の活動
 
-| 日時 | タスク | ステータス | 担当 |
-|------|--------|------------|------|
-| 2026-01-29 | 作業環境構築 | COMPLETED | Claude |
+| 日時       | タスク                         | ステータス | 担当   |
+| ---------- | ------------------------------ | ---------- | ------ |
+| 2026-01-29 | TASK-1.3: StateTranslator      | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.1: AIモジュール基本構造 | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.0: テスト環境構築       | COMPLETED  | Claude |
+| 2026-01-29 | 作業環境構築                   | COMPLETED  | Claude |
 
 ## ブロッカー
 
@@ -35,17 +41,42 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 
 ## Phase 1 詳細
 
-| タスクID | タスク名 | ステータス | 進捗 |
-|----------|----------|------------|------|
-| 1.0 | テスト環境構築 | NOT_STARTED | - |
-| 1.1 | AIモジュール基本構造 | NOT_STARTED | - |
-| 1.2 | WebSocketインターセプト | NOT_STARTED | - |
-| 1.3 | 状態変換 (StateTranslator) | NOT_STARTED | - |
-| 1.4 | ヒューリスティック | NOT_STARTED | - |
-| 1.5 | Claude API統合 | NOT_STARTED | - |
-| 1.6 | 基本プロンプト | NOT_STARTED | - |
-| 1.7 | Chat UI基本実装 | NOT_STARTED | - |
-| 1.8 | 盤面複雑性評価 | NOT_STARTED | - |
+| タスクID | タスク名                   | ステータス  | 進捗 |
+| -------- | -------------------------- | ----------- | ---- |
+| 1.0      | テスト環境構築             | COMPLETED   | 100% |
+| 1.1      | AIモジュール基本構造       | COMPLETED   | 100% |
+| 1.2      | WebSocketインターセプト    | NOT_STARTED | -    |
+| 1.3      | 状態変換 (StateTranslator) | COMPLETED   | 100% |
+| 1.4      | ヒューリスティック         | NOT_STARTED | -    |
+| 1.5      | Claude API統合             | NOT_STARTED | -    |
+| 1.6      | 基本プロンプト             | NOT_STARTED | -    |
+| 1.7      | Chat UI基本実装            | NOT_STARTED | -    |
+| 1.8      | 盤面複雑性評価             | NOT_STARTED | -    |
+
+---
+
+## 完了した成果物
+
+### TASK-1.0: テスト環境構築
+
+- `bunfig.toml` - Bun テスト設定
+- `src/test/setup.ts` - テストセットアップ（happy-dom）
+- `src/test/mocks/` - モックファイル群
+  - `anthropic.ts` - Anthropic APIモック
+  - `gameState.ts` - ゲーム状態モック
+  - `websocket.ts` - WebSocketモック
+- ESLint設定更新（テストファイルのignore追加）
+
+### TASK-1.1: AIモジュール基本構造
+
+- `src/ai/types.ts` - AI型定義
+- `src/ai/constants.ts` - 設定値・定数
+- `src/ai/index.ts` - エクスポート
+
+### TASK-1.3: StateTranslator
+
+- `src/ai/IdMapper.ts` - ID短縮/復元クラス
+- `src/ai/StateTranslator.ts` - GameState→AIGameContext変換
 
 ---
 

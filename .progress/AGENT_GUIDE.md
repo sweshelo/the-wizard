@@ -50,6 +50,7 @@ cat .progress/CURRENT_STATUS.md
 
 ```markdown
 <!-- /.progress/tasks/phase1/TASK-1.1.md -->
+
 # TASK-1.1: AIモジュール基本構造
 
 ## ステータス: IN_PROGRESS
@@ -90,7 +91,29 @@ cat .progress/CURRENT_STATUS.md
 - AIController の型定義を作成
 ```
 
-### Step 4: 完了報告
+### Step 4: コミットルール
+
+**重要: 1タスク1コミットの原則**
+
+- 各タスク（TASK-X.Y）は独立した1つのコミットとしてまとめる
+- タスク完了時に以下を確認してからコミット:
+  1. 全テストがパス (`bun test`)
+  2. Lintがパス (`bun lint`)
+  3. 進捗ファイルが更新されている
+
+```bash
+# タスク完了時のコミット例
+git add src/ai/ .progress/
+git commit -m "feat(ai): implement TASK-1.3 StateTranslator
+
+- Add translateGameState function
+- Add IdMapper for ID shortening/restoration
+- Add comprehensive tests (33 test cases)
+
+Closes TASK-1.3"
+```
+
+### Step 5: 完了報告
 
 1. 全テストが通ることを確認
 2. `bun lint` が通ることを確認
@@ -169,7 +192,7 @@ describe('StateTranslator', () => {
 
     it('should identify current player turn', () => {
       const gameState = createMockGameState({
-        game: { turnPlayer: 'player-1' }
+        game: { turnPlayer: 'player-1' },
       });
 
       const result = translateGameState(gameState, 'player-1');
