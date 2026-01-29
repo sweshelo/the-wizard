@@ -10,3 +10,13 @@ export type {
 
 export { BlockEvaluator } from './BlockEvaluator';
 export type { BlockContext, BlockEvaluation, RankedBlocker } from './BlockEvaluator';
+
+export { InterceptEvaluator } from './InterceptEvaluator';
+export type {
+  BattleState,
+  GamePhase as InterceptGamePhase,
+  InterceptContext,
+  InterceptEvaluation,
+  RankedIntercept,
+  HoldDecision,
+} from './InterceptEvaluator';

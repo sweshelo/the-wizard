@@ -6,7 +6,7 @@
 
 ```
 Phase 1: 基盤構築 (MVP)    [██████████] 100%  COMPLETED
-Phase 2: 推論改善          [█████░░░░░] 50%  IN_PROGRESS
+Phase 2: 推論改善          [██████░░░░] 67%  IN_PROGRESS
 Phase 3: 高度な機能        [░░░░░░░░░░] 0%  NOT_STARTED
 Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 ```
@@ -22,7 +22,7 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 | 2.1      | カタログ情報の活用         | P0     | Phase 1 (完了) | COMPLETED   |
 | 2.2      | 戦略プロンプトの洗練       | P0     | TASK-2.1       | COMPLETED   |
 | 2.3      | 攻撃/ブロック判断          | P0     | TASK-2.2       | COMPLETED   |
-| 2.4      | インターセプト判断         | P0     | TASK-2.3       | NOT_STARTED |
+| 2.4      | インターセプト判断         | P0     | TASK-2.3       | COMPLETED   |
 | 2.5      | ゲーム開始前分析 (Opus)    | P0     | TASK-2.2       | NOT_STARTED |
 | 2.6      | ユーザーフィードバック機能 | P1     | TASK-2.5       | NOT_STARTED |
 
@@ -30,6 +30,7 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 
 | 日時       | タスク                            | ステータス | 担当   |
 | ---------- | --------------------------------- | ---------- | ------ |
+| 2026-01-29 | TASK-2.4: インターセプト判断      | COMPLETED  | Claude |
 | 2026-01-29 | TASK-2.3: 攻撃/ブロック判断       | COMPLETED  | Claude |
 | 2026-01-29 | TASK-2.2: 戦略プロンプトの洗練    | COMPLETED  | Claude |
 | 2026-01-29 | TASK-2.1: カタログ情報の活用      | COMPLETED  | Claude |
@@ -143,8 +144,8 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 
 ## テスト状況
 
-- 全255テストがパス
-- 2227 expect() calls
+- 全270テストがパス
+- 2245 expect() calls
 - Bun test で実行
 
 ---
