@@ -1,7 +1,8 @@
 // src/ai/thread/ThreadSummarizer.test.ts
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { ThreadSummarizer, type SummaryResult } from './ThreadSummarizer';
+import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { ThreadSummarizer, type SummaryResult, type SummarizationConfig } from './ThreadSummarizer';
 import type { ContextEntry } from './ContextWindowManager';
+import type { LLMClient } from '../LLMClient';
 
 describe('ThreadSummarizer', () => {
   let summarizer: ThreadSummarizer;
@@ -196,6 +197,164 @@ describe('ThreadSummarizer', () => {
       // 要約は元のテキストより短くなる
       const originalLength = entries.map(e => e.content).join(' ').length;
       expect(result.summary.length).toBeLessThan(originalLength);
+    });
+  });
+
+  describe('summarizeWithLLM', () => {
+    // モックLLMClientを作成
+    function createMockLLMClient(response: string): LLMClient {
+      return {
+        send: mock(() =>
+          Promise.resolve({
+            content: response,
+            model: 'haiku' as const,
+            inputTokens: 100,
+            outputTokens: 50,
+            estimatedCost: 0.001,
+            latencyMs: 100,
+          })
+        ),
+        sendWithHistory: mock(() =>
+          Promise.resolve({
+            content: response,
+            model: 'haiku' as const,
+            inputTokens: 100,
+            outputTokens: 50,
+            estimatedCost: 0.001,
+            latencyMs: 100,
+          })
+        ),
+        getTotalCost: () => 0.001,
+        resetTotalCost: () => {},
+      } as unknown as LLMClient;
+    }
+
+    it('generates LLM-based summary', async () => {
+      const mockClient = createMockLLMClient(
+        'ターン1-5: 序盤の展開。相手がアタック、ライフ20→15。'
+      );
+      const entries: ContextEntry[] = [
+        createEntry('ターン1: ユニットを召喚', 'user', 100),
+        createEntry('相手がアタック、ライフが20から15に減少', 'assistant', 100),
+        createEntry('ターン2: ブロッカーを配置', 'user', 100),
+      ];
+
+      const result = await summarizer.summarizeWithLLM(entries, mockClient);
+
+      expect(result.summary).toContain('ターン1-5');
+      expect(result.compressedTokens).toBeLessThan(result.originalTokens);
+      expect(mockClient.send).toHaveBeenCalled();
+    });
+
+    it('handles empty entries', async () => {
+      const mockClient = createMockLLMClient('');
+
+      const result = await summarizer.summarizeWithLLM([], mockClient);
+
+      expect(result.summary).toBe('');
+      expect(result.entriesProcessed).toBe(0);
+      expect(mockClient.send).not.toHaveBeenCalled();
+    });
+
+    it('falls back to rule-based on LLM error', async () => {
+      const mockClient = {
+        send: mock(() => Promise.reject(new Error('API Error'))),
+        sendWithHistory: mock(() => Promise.reject(new Error('API Error'))),
+        getTotalCost: () => 0,
+        resetTotalCost: () => {},
+      } as unknown as LLMClient;
+
+      const entries: ContextEntry[] = [
+        createEntry('ターン1: アタック宣言', 'user', 50),
+        createEntry('ブロックで対応', 'assistant', 50),
+      ];
+
+      const result = await summarizer.summarizeWithLLM(entries, mockClient);
+
+      // フォールバックでルールベース要約が使われる
+      expect(result.summary.length).toBeGreaterThan(0);
+      expect(result.entriesProcessed).toBe(2);
+    });
+  });
+
+  describe('summarizeHybrid', () => {
+    function createMockLLMClient(response: string): LLMClient {
+      return {
+        send: mock(() =>
+          Promise.resolve({
+            content: response,
+            model: 'haiku' as const,
+            inputTokens: 100,
+            outputTokens: 50,
+            estimatedCost: 0.001,
+            latencyMs: 100,
+          })
+        ),
+        sendWithHistory: mock(() =>
+          Promise.resolve({
+            content: response,
+            model: 'haiku' as const,
+            inputTokens: 100,
+            outputTokens: 50,
+            estimatedCost: 0.001,
+            latencyMs: 100,
+          })
+        ),
+        getTotalCost: () => 0.001,
+        resetTotalCost: () => {},
+      } as unknown as LLMClient;
+    }
+
+    it('uses LLM when client is provided and enabled', async () => {
+      const config: SummarizationConfig = { enableLLMSummarization: true };
+      const summarizer = new ThreadSummarizer({ summarizationConfig: config });
+      const mockClient = createMockLLMClient('LLM要約結果');
+      const entries: ContextEntry[] = [createEntry('テスト', 'user', 50)];
+
+      const result = await summarizer.summarizeHybrid(entries, mockClient);
+
+      expect(result.summary).toBe('LLM要約結果');
+      expect(mockClient.send).toHaveBeenCalled();
+    });
+
+    it('uses rule-based when LLM is disabled', async () => {
+      const config: SummarizationConfig = { enableLLMSummarization: false };
+      const summarizer = new ThreadSummarizer({ summarizationConfig: config });
+      const mockClient = createMockLLMClient('LLM要約結果');
+      const entries: ContextEntry[] = [createEntry('アタック宣言', 'user', 50)];
+
+      const result = await summarizer.summarizeHybrid(entries, mockClient);
+
+      // ルールベース要約が使われる（LLMは呼ばれない）
+      expect(mockClient.send).not.toHaveBeenCalled();
+      expect(result.summary.length).toBeGreaterThan(0);
+    });
+
+    it('uses rule-based when no LLM client provided', async () => {
+      const entries: ContextEntry[] = [createEntry('ブロック対応', 'user', 50)];
+
+      const result = await summarizer.summarizeHybrid(entries);
+
+      expect(result.summary.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('SummarizationConfig', () => {
+    it('respects summarizeAfterTurns setting', () => {
+      const config: SummarizationConfig = { summarizeAfterTurns: 5 };
+      const summarizer = new ThreadSummarizer({ summarizationConfig: config });
+
+      expect(summarizer.getConfig().summarizeAfterTurns).toBe(5);
+    });
+
+    it('uses default values when not specified', () => {
+      const summarizer = new ThreadSummarizer();
+      const config = summarizer.getConfig();
+
+      expect(config.summarizeAfterTurns).toBe(10);
+      expect(config.keepDetailedTurns).toBe(5);
+      expect(config.maxEventSummaryLength).toBe(500);
+      expect(config.enableLLMSummarization).toBe(true);
     });
   });
 });
