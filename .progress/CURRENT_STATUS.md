@@ -6,32 +6,36 @@
 
 ```
 Phase 1: 基盤構築 (MVP)    [██████████] 100%  COMPLETED
-Phase 2: 推論改善          [░░░░░░░░░░] 0%  NOT_STARTED
+Phase 2: 推論改善          [██████████] 100%  COMPLETED
 Phase 3: 高度な機能        [░░░░░░░░░░] 0%  NOT_STARTED
 Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 ```
 
 ## 現在のフェーズ
 
-**Phase 1: 基盤構築 (MVP)** - 完了
+**Phase 2: 推論改善** - 完了
 
-## 次に着手すべきタスク
+## Phase 2 タスク一覧
 
-Phase 2のタスクに進む準備が整っています。
-
-| タスクID | タスク名                   | 優先度 | 前提条件       |
-| -------- | -------------------------- | ------ | -------------- |
-| 2.1      | カタログ情報の活用         | P0     | Phase 1 (完了) |
-| 2.2      | 戦略プロンプトの洗練       | P0     | Phase 1 (完了) |
-| 2.3      | 攻撃/ブロック判断          | P0     | Phase 1 (完了) |
-| 2.4      | インターセプト判断         | P0     | Phase 1 (完了) |
-| 2.5      | ゲーム開始前分析 (Opus)    | P1     | Phase 1 (完了) |
-| 2.6      | ユーザーフィードバック機能 | P1     | Phase 1 (完了) |
+| タスクID | タスク名                   | 優先度 | 前提条件       | ステータス |
+| -------- | -------------------------- | ------ | -------------- | ---------- |
+| 2.1      | カタログ情報の活用         | P0     | Phase 1 (完了) | COMPLETED  |
+| 2.2      | 戦略プロンプトの洗練       | P0     | TASK-2.1       | COMPLETED  |
+| 2.3      | 攻撃/ブロック判断          | P0     | TASK-2.2       | COMPLETED  |
+| 2.4      | インターセプト判断         | P0     | TASK-2.3       | COMPLETED  |
+| 2.5      | ゲーム開始前分析 (Opus)    | P0     | TASK-2.2       | COMPLETED  |
+| 2.6      | ユーザーフィードバック機能 | P1     | TASK-2.5       | COMPLETED  |
 
 ## 最近の活動
 
 | 日時       | タスク                            | ステータス | 担当   |
 | ---------- | --------------------------------- | ---------- | ------ |
+| 2026-01-29 | TASK-2.6: ユーザーフィードバック  | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.5: ゲーム開始前分析        | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.4: インターセプト判断      | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.3: 攻撃/ブロック判断       | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.2: 戦略プロンプトの洗練    | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.1: カタログ情報の活用      | COMPLETED  | Claude |
 | 2026-01-29 | TASK-1.8: 盤面複雑性評価          | COMPLETED  | Claude |
 | 2026-01-29 | TASK-1.7: Chat UI基本実装         | COMPLETED  | Claude |
 | 2026-01-29 | TASK-1.6: 基本プロンプト          | COMPLETED  | Claude |
@@ -140,10 +144,55 @@ Phase 2のタスクに進む準備が整っています。
 
 ---
 
+## Phase 2 詳細
+
+| タスクID | タスク名                   | ステータス | 進捗 |
+| -------- | -------------------------- | ---------- | ---- |
+| 2.1      | カタログ情報の活用         | COMPLETED  | 100% |
+| 2.2      | 戦略プロンプトの洗練       | COMPLETED  | 100% |
+| 2.3      | 攻撃/ブロック判断          | COMPLETED  | 100% |
+| 2.4      | インターセプト判断         | COMPLETED  | 100% |
+| 2.5      | ゲーム開始前分析 (Opus)    | COMPLETED  | 100% |
+| 2.6      | ユーザーフィードバック機能 | COMPLETED  | 100% |
+
+### TASK-2.1: カタログ情報の活用
+
+- `src/ai/catalog/CatalogCache.ts` - LRUキャッシュ実装
+- `src/ai/catalog/KeywordService.ts` - キーワード能力サービス
+- `src/ai/catalog/CatalogService.ts` - カード情報検索サービス
+- `src/ai/catalog/index.ts` - エクスポート
+
+### TASK-2.2: 戦略プロンプトの洗練
+
+- `src/ai/prompts/strategy.ts` - 色別戦略プロンプト
+- `src/ai/prompts/analysis.ts` - ゲーム状況分析
+
+### TASK-2.3: 攻撃/ブロック判断
+
+- `src/ai/tactics/AttackEvaluator.ts` - 攻撃評価
+- `src/ai/tactics/BlockEvaluator.ts` - ブロック評価
+
+### TASK-2.4: インターセプト判断
+
+- `src/ai/tactics/InterceptEvaluator.ts` - インターセプト評価
+
+### TASK-2.5: ゲーム開始前分析
+
+- `src/ai/PreGameAnalyzer.ts` - デッキ分析クラス
+- `src/ai/thread/PregameThread.ts` - ゲーム開始前スレッド
+- `src/ai/prompts/pregame.ts` - ゲーム開始前プロンプト
+
+### TASK-2.6: ユーザーフィードバック機能
+
+- `src/component/ai/AIChatInteraction.tsx` - インタラクションコンポーネント
+- `src/component/ai/hooks/useFeedback.ts` - フィードバックフック
+
+---
+
 ## テスト状況
 
-- 全155テストがパス
-- 299 expect() calls
+- 全313テストがパス
+- 2311 expect() calls
 - Bun test で実行
 
 ---
