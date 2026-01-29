@@ -48,3 +48,12 @@ export {
   type BoardAdvantage,
   type ResourceAnalysis,
 } from './analysis';
+
+// Pregame prompts
+export {
+  PREGAME_SYSTEM_PROMPT,
+  buildPregamePrompt,
+  type DeckInfo,
+  type DeckCardInfo,
+  type PregamePromptResponse,
+} from './pregame';

@@ -6,7 +6,7 @@
 
 ```
 Phase 1: 基盤構築 (MVP)    [██████████] 100%  COMPLETED
-Phase 2: 推論改善          [██████░░░░] 67%  IN_PROGRESS
+Phase 2: 推論改善          [████████░░] 83%  IN_PROGRESS
 Phase 3: 高度な機能        [░░░░░░░░░░] 0%  NOT_STARTED
 Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 ```
@@ -23,13 +23,14 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 | 2.2      | 戦略プロンプトの洗練       | P0     | TASK-2.1       | COMPLETED   |
 | 2.3      | 攻撃/ブロック判断          | P0     | TASK-2.2       | COMPLETED   |
 | 2.4      | インターセプト判断         | P0     | TASK-2.3       | COMPLETED   |
-| 2.5      | ゲーム開始前分析 (Opus)    | P0     | TASK-2.2       | NOT_STARTED |
+| 2.5      | ゲーム開始前分析 (Opus)    | P0     | TASK-2.2       | COMPLETED   |
 | 2.6      | ユーザーフィードバック機能 | P1     | TASK-2.5       | NOT_STARTED |
 
 ## 最近の活動
 
 | 日時       | タスク                            | ステータス | 担当   |
 | ---------- | --------------------------------- | ---------- | ------ |
+| 2026-01-29 | TASK-2.5: ゲーム開始前分析        | COMPLETED  | Claude |
 | 2026-01-29 | TASK-2.4: インターセプト判断      | COMPLETED  | Claude |
 | 2026-01-29 | TASK-2.3: 攻撃/ブロック判断       | COMPLETED  | Claude |
 | 2026-01-29 | TASK-2.2: 戦略プロンプトの洗練    | COMPLETED  | Claude |
@@ -144,8 +145,8 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 
 ## テスト状況
 
-- 全270テストがパス
-- 2245 expect() calls
+- 全292テストがパス
+- 2284 expect() calls
 - Bun test で実行
 
 ---
