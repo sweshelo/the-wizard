@@ -44,6 +44,7 @@ import { ErrorOverlay } from '@/component/ui/ErrorOverlay';
 import { useErrorOverlay } from '@/hooks/error-overlay';
 import { TurnChangeEffect } from '@/component/ui/TurnChangeEffect';
 import { isICard } from '@/helper/card';
+import { AIChat } from '@/component/ai';
 
 interface RoomProps {
   id: string;
@@ -330,6 +331,9 @@ export const Game = ({ id }: RoomProps) => {
           {/* カード一覧 */}
           <CardsDialog />
         </div>
+
+        {/* AIチャット */}
+        {process.env.NEXT_PUBLIC_AI_ENABLED === 'true' && <AIChat />}
       </div>
     </DndContext>
   );
