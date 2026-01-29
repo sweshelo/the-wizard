@@ -207,11 +207,13 @@ export class AttackEvaluator {
 
     // ブロッカーがいる場合は単純なリーサルは困難
     if (activeBlockers.length > 0) {
-      // 全てのアタッカーがブロッカーより高BPか確認
-      const canPushThrough = activeAttackers.every(attacker => {
-        const canBeat = activeBlockers.some(blocker => attacker.bp > blocker.bp);
-        return canBeat;
-      });
+      // 全てのブロッカーを突破できるか確認
+      // BP降順でソートし、上位アタッカーが上位ブロッカーを倒せるかチェック
+      const sortedAttackers = [...activeAttackers].sort((a, b) => b.bp - a.bp);
+      const sortedBlockers = [...activeBlockers].sort((a, b) => b.bp - a.bp);
+      const canPushThrough =
+        sortedAttackers.length >= sortedBlockers.length &&
+        sortedBlockers.every((blocker, index) => sortedAttackers[index].bp > blocker.bp);
 
       if (!canPushThrough) {
         return {

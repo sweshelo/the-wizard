@@ -70,11 +70,16 @@ export function useFeedback(
   // フィードバック送信
   const submitFeedback = useCallback(
     (optionId: string) => {
+      // interactionTypeが無効な場合は何もしない
+      if (!interactionType || interactionType === 'none') {
+        return;
+      }
+
       setIsSubmitting(true);
 
       const feedback: UserFeedback = {
         messageId,
-        interactionType: interactionType as 'confirm' | 'choice' | 'rating' | 'text',
+        interactionType: interactionType,
         response: {
           selected: optionId,
         },

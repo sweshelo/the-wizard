@@ -47,6 +47,11 @@ export function AIChatInteraction({
   // フィードバック送信ハンドラ
   const handleFeedback = useCallback(
     (optionId: string) => {
+      // interactionTypeが無効な場合は何もしない
+      if (!interactionType || interactionType === 'none') {
+        return;
+      }
+
       // 戦略調整でテキスト入力が有効な場合は、テキスト入力を表示
       if (optionId === 'needs-adjustment' && enableTextFeedback) {
         setShowTextInput(true);
@@ -57,7 +62,7 @@ export function AIChatInteraction({
 
       const feedback: UserFeedback = {
         messageId,
-        interactionType: interactionType as 'confirm' | 'choice' | 'rating' | 'text',
+        interactionType: interactionType,
         response: {
           selected: optionId,
         },
@@ -127,6 +132,7 @@ export function AIChatInteraction({
             value={textFeedback}
             onChange={e => setTextFeedback(e.target.value)}
             placeholder="調整内容を入力..."
+            aria-label="戦略調整のフィードバック"
             className="flex-1 bg-gray-700 text-white text-xs px-2 py-1 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
           />
           <button

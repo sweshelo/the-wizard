@@ -83,12 +83,12 @@ export class BlockEvaluator {
           reason: 'ライフ1で勝てるブロッカーでブロック',
         };
       }
-      // 勝てなくてもブロック
-      const bestLoser = rankedBlockers[rankedBlockers.length - 1];
+      // 勝てなくてもブロック（最良のブロッカーを選択）
+      const bestAvailable = rankedBlockers[0];
       return {
         shouldBlock: true,
-        recommendedBlocker: bestLoser.unit,
-        tradeValue: bestLoser.value,
+        recommendedBlocker: bestAvailable.unit,
+        tradeValue: bestAvailable.value,
         reason: 'ライフ1で危機的なため強制ブロック',
       };
     }

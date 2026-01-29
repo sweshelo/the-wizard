@@ -38,7 +38,10 @@ describe('CatalogService', () => {
     it('should find cards by exact name', () => {
       // まず何かしらのカードを取得
       const card = service.getById('1-0-001');
-      if (!card) return; // カタログが空の場合スキップ
+      expect(card).not.toBeNull();
+      if (!card) {
+        throw new Error('Catalog data missing for test');
+      }
 
       const results = service.searchByName(card.name);
 
@@ -95,22 +98,26 @@ describe('CatalogService', () => {
   describe('getEnhancedCardInfo', () => {
     it('should return enhanced info with formatted ability', () => {
       const result = service.getEnhancedCardInfo('1-0-001');
-
-      if (result) {
-        expect(result.id).toBe('1-0-001');
-        expect(result.formattedAbility).toBeDefined();
-        expect(result.keywords).toBeDefined();
-        expect(Array.isArray(result.keywords)).toBe(true);
+      expect(result).not.toBeNull();
+      if (!result) {
+        throw new Error('Enhanced card info missing for test');
       }
+
+      expect(result.id).toBe('1-0-001');
+      expect(result.formattedAbility).toBeDefined();
+      expect(result.keywords).toBeDefined();
+      expect(Array.isArray(result.keywords)).toBe(true);
     });
 
     it('should extract keywords from ability text', () => {
       // 能力テキストに含まれるキーワードを抽出
       const result = service.getEnhancedCardInfo('1-0-001');
-
-      if (result) {
-        expect(Array.isArray(result.keywords)).toBe(true);
+      expect(result).not.toBeNull();
+      if (!result) {
+        throw new Error('Enhanced card info missing for test');
       }
+
+      expect(Array.isArray(result.keywords)).toBe(true);
     });
   });
 });

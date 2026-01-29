@@ -200,6 +200,12 @@ export class InterceptEvaluator {
           reason: holdDecision.reason,
         };
       }
+      // 使用推奨の場合
+      return {
+        shouldUse: true,
+        value: 4,
+        reason: holdDecision.reason,
+      };
     }
 
     return {

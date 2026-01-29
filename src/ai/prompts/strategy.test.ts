@@ -38,8 +38,11 @@ describe('Strategy Prompts', () => {
   describe('getColorStrategy', () => {
     it('should return strategy for red color', () => {
       const strategy = getColorStrategy(1);
+      expect(strategy).not.toBeNull();
+      if (!strategy) {
+        throw new Error('Expected strategy for color 1');
+      }
 
-      expect(strategy).toBeDefined();
       expect(strategy.name).toBe('赤');
       expect(strategy.playstyle).toBeDefined();
       expect(strategy.strengths).toBeArray();
@@ -49,6 +52,10 @@ describe('Strategy Prompts', () => {
 
     it('should return strategy for yellow color', () => {
       const strategy = getColorStrategy(2);
+      expect(strategy).not.toBeNull();
+      if (!strategy) {
+        throw new Error('Expected strategy for color 2');
+      }
 
       expect(strategy.name).toBe('黄');
       expect(strategy.playstyle).toContain('バランス');
@@ -56,6 +63,10 @@ describe('Strategy Prompts', () => {
 
     it('should return strategy for blue color', () => {
       const strategy = getColorStrategy(3);
+      expect(strategy).not.toBeNull();
+      if (!strategy) {
+        throw new Error('Expected strategy for color 3');
+      }
 
       expect(strategy.name).toBe('青');
       expect(strategy.playstyle).toBeDefined();
@@ -63,6 +74,10 @@ describe('Strategy Prompts', () => {
 
     it('should return strategy for green color', () => {
       const strategy = getColorStrategy(4);
+      expect(strategy).not.toBeNull();
+      if (!strategy) {
+        throw new Error('Expected strategy for color 4');
+      }
 
       expect(strategy.name).toBe('緑');
       expect(strategy.playstyle).toBeDefined();
@@ -70,6 +85,10 @@ describe('Strategy Prompts', () => {
 
     it('should return strategy for purple color', () => {
       const strategy = getColorStrategy(5);
+      expect(strategy).not.toBeNull();
+      if (!strategy) {
+        throw new Error('Expected strategy for color 5');
+      }
 
       expect(strategy.name).toBe('紫');
       expect(strategy.playstyle).toBeDefined();
