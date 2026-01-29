@@ -8,3 +8,6 @@ export type { ContextEntry, ContextWindowManagerConfig, LLMMessage } from './Con
 
 export { ThreadSummarizer } from './ThreadSummarizer';
 export type { SummaryResult, ThreadSummarizerConfig } from './ThreadSummarizer';
+
+export { PeriodicThread } from './PeriodicThread';
+export type { BoardEvaluation } from './PeriodicThread';
