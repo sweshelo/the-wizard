@@ -150,7 +150,7 @@ src/ai/StateTranslator.test.ts
 ### テストの構造
 
 ```typescript
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { translateGameState } from './StateTranslator';
 import { createMockGameState } from '@/test/mocks/gameState';
 

@@ -54,7 +54,7 @@ src/ai/
 
 ```typescript
 // src/ai/StateTranslator.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { translateGameState } from './StateTranslator';
 import { createMockGameState } from '@/test/mocks/gameState';
 
@@ -135,7 +135,7 @@ export function translateGameState(
   };
 }
 
-function translatePlayerResources(player?: IPlayer): PlayerResources {
+function translatePlayerResources(player?: GameState['players'][string]): PlayerResources {
   return {
     life: player?.life.current ?? 0,
     cp: {
@@ -201,7 +201,7 @@ describe('player resources', () => {
 
 ```typescript
 // src/ai/IdMapper.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { IdMapper } from './IdMapper';
 
 describe('IdMapper', () => {

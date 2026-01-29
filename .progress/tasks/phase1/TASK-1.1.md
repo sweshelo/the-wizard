@@ -33,7 +33,7 @@ src/ai/
 
 ```typescript
 // src/ai/index.test.ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import * as AIModule from './index';
 
 describe('AI Module', () => {
@@ -48,7 +48,7 @@ describe('AI Module', () => {
 
 ```typescript
 // src/ai/types.test.ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import type { AIGameContext, CompactUnit, CompactCard } from './types';
 
 describe('AI Types', () => {
@@ -133,7 +133,7 @@ export interface CompactCard {
 
 ```typescript
 // src/ai/constants.test.ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { AI_CONFIG, MODEL_CONFIG, TIMEOUT_CONFIG } from './constants';
 
 describe('AI Constants', () => {

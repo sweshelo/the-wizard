@@ -70,13 +70,12 @@ TASK-1.0 (テスト環境構築)
 
 **ファイル:** [TASK-1.0.md](./TASK-1.0.md)
 
-**目的:** Vitestによるテスト環境のセットアップ
+**目的:** Bun組み込みテストランナーによるテスト環境のセットアップ
 
 **成果物:**
-- `vitest.config.ts`
+- `bunfig.toml` (テスト設定)
 - `src/test/setup.ts`
-- `src/test/mocks/` ディレクトリ
-- package.json へのスクリプト追加
+- `src/test/mocks/` ディレクトリ (Anthropic APIモック含む)
 
 ---
 

@@ -44,7 +44,7 @@ src/ai/
 
 ```typescript
 // src/ai/NewFile.test.ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 
 describe('NewModule', () => {
   it('should do something', () => {
