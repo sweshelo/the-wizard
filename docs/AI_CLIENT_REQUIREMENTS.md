@@ -1,9 +1,9 @@
 # CODE OF JOKER AI Client 要件定義書
 
-**バージョン:** 1.4
+**バージョン:** 1.5
 **作成日:** 2026-01-29
 **更新日:** 2026-01-29
-**ステータス:** ドラフト (イベントバッチ戦略追加)
+**ステータス:** ドラフト (自動学習・シナジー検出追加)
 
 ---
 
@@ -582,6 +582,72 @@ const catalogTools = [
       },
       required: ["keyword"]
     }
+  },
+  // 知識関連ツール
+  {
+    name: "lookup_card_with_knowledge",
+    description: "カード情報と学習済みシナジー・コンボ・対策知識を取得",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "カードIDまたはカード名"
+        },
+        knowledgeTypes: {
+          type: "array",
+          items: { type: "string" },
+          description: "取得する知識タイプ: synergy, combo, counter, strategy"
+        },
+        excludeKnowledgeIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "循環参照防止: 除外する知識ID"
+        }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "find_synergies",
+    description: "指定カードとシナジーを持つカード・知識を検索（デッキ構築時に有用）",
+    input_schema: {
+      type: "object",
+      properties: {
+        cardId: { type: "string" },
+        colors: {
+          type: "array",
+          items: { type: "number" },
+          description: "色で絞り込み (1:赤, 2:黄, 3:青, 4:緑, 5:紫)"
+        },
+        limit: { type: "number", default: 10 }
+      },
+      required: ["cardId"]
+    }
+  },
+  {
+    name: "estimate_opponent_deck",
+    description: "公開情報から相手デッキの可能性が高いカードを推定",
+    input_schema: {
+      type: "object",
+      properties: {
+        revealedCards: {
+          type: "array",
+          items: { type: "string" },
+          description: "公開されたカードID（フィールド、捨札など）"
+        },
+        colors: {
+          type: "array",
+          items: { type: "number" }
+        },
+        excludeKnowledgeIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "循環参照防止: 除外する知識ID"
+        }
+      },
+      required: ["revealedCards"]
+    }
   }
 ];
 ```
@@ -592,7 +658,10 @@ const catalogTools = [
 1. AIがゲーム状態を受信
 2. 不明なカード効果がある場合、lookup_card ツールを呼び出し
 3. キーワード能力の詳細が必要な場合、lookup_keyword ツールを呼び出し
-4. 取得した情報を元に意思決定
+4. シナジー・コンボ知識が必要な場合、lookup_card_with_knowledge を呼び出し
+5. 相手デッキ推定が必要な場合、estimate_opponent_deck を呼び出し
+6. 取得した情報を元に意思決定
+7. 循環参照防止: 返却された知識IDは次回呼び出しで excludeKnowledgeIds に含める
 ```
 
 #### キャッシュ戦略
@@ -603,8 +672,14 @@ interface CatalogCache {
   cards: Map<string, CatalogEntry>;
   keywords: Map<string, KeywordEntry>;
 
+  // 知識キャッシュ
+  knowledge: Map<string, KnowledgeEntry[]>;
+
   // キャッシュヒット時はAPI呼び出し不要
   // 1ゲーム中の同一カード参照を最適化
+
+  // 循環参照防止: リクエスト内で返却済みの知識ID
+  returnedKnowledgeIds: Set<string>;
 }
 ```
 
@@ -835,21 +910,28 @@ async function handleUserMessage(
 
 #### 3.6.4 Knowledge Storage (LocalStorage)
 
-ユーザーとの対話から得られた知識を永続化:
+ゲーム中のやり取りから**自動的に知識を蓄積**し、将来のゲームで活用する。
+
+##### 3.6.4.1 知識エントリ構造
 
 ```typescript
 interface KnowledgeEntry {
   id: string;
   createdAt: Date;
+  updatedAt: Date;
   gameId?: string;           // 特定ゲームに紐づく場合
+  source: "user" | "observation" | "analysis";  // 知識の出所
 
-  type: "preference" | "strategy" | "correction" | "insight";
+  type: KnowledgeType;
 
   content: {
     topic: string;           // 例: "ブロック判断", "進化タイミング"
     insight: string;         // 学習内容
     context?: string;        // 状況説明
   };
+
+  // タギングシステム
+  tags: KnowledgeTags;
 
   // 適用条件
   applicability: {
@@ -862,38 +944,384 @@ interface KnowledgeEntry {
   confidence: number;        // 0-1
   usageCount: number;        // 参照回数
   lastUsed?: Date;
+
+  // 関連知識（循環参照防止用にIDのみ）
+  relatedKnowledgeIds?: string[];
 }
 
+type KnowledgeType =
+  | "preference"    // ユーザーの好み
+  | "strategy"      // 戦略知識
+  | "correction"    // ユーザーからの訂正
+  | "insight"       // 一般的な洞察
+  | "synergy"       // カードシナジー
+  | "combo"         // コンボパターン
+  | "counter"       // 対策知識
+  | "deck_pattern"; // デッキパターン
+
+// タギングシステム
+interface KnowledgeTags {
+  colors?: CardColor[];      // 関連する色 (1:赤, 2:黄, 3:青, 4:緑, 5:紫)
+  cards?: string[];          // 関連カードID（複数可）
+  cardNames?: string[];      // 関連カード名（検索用）
+  species?: string[];        // 関連種族
+  keywords?: string[];       // 関連キーワード能力
+  deckArchetype?: string;    // デッキアーキタイプ名
+}
+
+type CardColor = 1 | 2 | 3 | 4 | 5;
+```
+
+##### 3.6.4.2 自動学習ソース
+
+```typescript
+// 自動学習トリガー
+interface AutoLearningTriggers {
+  // 1. 対戦相手のプレイから学習
+  opponentPlay: {
+    // シナジー検出: 連続した効果発動パターン
+    detectSynergy(events: GameEventEntry[]): SynergyCandidate | null;
+    // コンボ検出: 複数カードの連携
+    detectCombo(events: GameEventEntry[]): ComboCandidate | null;
+  };
+
+  // 2. ゲーム結果から学習
+  gameResult: {
+    // 勝敗に寄与した要因分析
+    analyzeWinLossFactors(game: GameHistory): FactorAnalysis;
+    // 相手デッキタイプの確定
+    confirmDeckType(game: GameHistory): DeckTypeConfirmation;
+  };
+
+  // 3. 定期分析から学習
+  periodicAnalysis: {
+    // Opusの分析結果から重要な洞察を抽出
+    extractInsights(analysis: PeriodicAnalysisResult): KnowledgeEntry[];
+  };
+}
+
+// シナジー候補
+interface SynergyCandidate {
+  cards: string[];           // 関連カードID
+  pattern: string;           // パターン説明
+  observedCount: number;     // 観察回数
+  effectiveness: number;     // 有効性スコア (0-1)
+  colors: CardColor[];
+  context: {
+    turn: number;
+    round: number;
+    boardState: string;      // 簡易盤面説明
+  };
+}
+
+// コンボ候補
+interface ComboCandidate {
+  cards: string[];           // コンボ構成カード
+  sequence: string[];        // 発動順序
+  effect: string;            // 効果説明
+  conditions?: string[];     // 発動条件
+  colors: CardColor[];
+}
+```
+
+##### 3.6.4.3 Knowledge Store
+
+```typescript
 // LocalStorage キー
 const KNOWLEDGE_STORAGE_KEY = "coj-ai-knowledge";
+const KNOWLEDGE_INDEX_KEY = "coj-ai-knowledge-index";
 
 // Knowledge Store
 interface KnowledgeStore {
   entries: KnowledgeEntry[];
 
+  // インデックス（高速検索用）
+  indices: {
+    byCard: Map<string, string[]>;      // cardId -> knowledgeIds
+    byColor: Map<CardColor, string[]>;  // color -> knowledgeIds
+    byType: Map<KnowledgeType, string[]>;
+    byDeckArchetype: Map<string, string[]>;
+  };
+
   // 操作
   add(entry: KnowledgeEntry): void;
+  update(id: string, updates: Partial<KnowledgeEntry>): void;
   search(query: KnowledgeQuery): KnowledgeEntry[];
   getRelevant(gameState: AIGameContext): KnowledgeEntry[];
   prune(): void;  // 古い/低信頼度のエントリを削除
+
+  // 自動学習
+  learnFromEvents(events: GameEventEntry[]): KnowledgeEntry[];
+  learnFromGameResult(game: GameHistory): KnowledgeEntry[];
+
+  // カード関連知識取得
+  getByCard(cardId: string): KnowledgeEntry[];
+  getByCards(cardIds: string[]): KnowledgeEntry[];
+  getByColor(color: CardColor): KnowledgeEntry[];
+  getSynergies(cardId: string): KnowledgeEntry[];
 }
 
-// プロンプトへの注入
+// 検索クエリ
+interface KnowledgeQuery {
+  cards?: string[];          // 関連カードで検索
+  colors?: CardColor[];      // 色で検索
+  types?: KnowledgeType[];   // 知識タイプで検索
+  deckArchetype?: string;    // デッキアーキタイプで検索
+  keywords?: string[];       // キーワード能力で検索
+  minConfidence?: number;    // 最小信頼度
+  limit?: number;
+
+  // 循環参照防止: 既に取得済みのIDを除外
+  excludeIds?: string[];
+}
+```
+
+##### 3.6.4.4 ツール連携（MCP拡張）
+
+カタログ検索時に関連知識も返す:
+
+```typescript
+// 拡張されたカタログツール
+const extendedCatalogTools = [
+  {
+    name: "lookup_card_with_knowledge",
+    description: "カード情報と関連する学習済み知識を取得",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "カードIDまたはカード名" },
+        includeKnowledge: { type: "boolean", default: true },
+        knowledgeTypes: {
+          type: "array",
+          items: { type: "string" },
+          description: "取得する知識タイプ: synergy, combo, counter, strategy"
+        },
+        maxKnowledge: { type: "number", default: 5 }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "find_synergies",
+    description: "指定カードとシナジーを持つカード・知識を検索",
+    input_schema: {
+      type: "object",
+      properties: {
+        cardId: { type: "string" },
+        colors: { type: "array", items: { type: "number" } },
+        limit: { type: "number", default: 10 }
+      },
+      required: ["cardId"]
+    }
+  },
+  {
+    name: "estimate_opponent_deck",
+    description: "公開情報から相手デッキのカードを推定",
+    input_schema: {
+      type: "object",
+      properties: {
+        revealedCards: {
+          type: "array",
+          items: { type: "string" },
+          description: "公開されたカードID（フィールド、捨札など）"
+        },
+        colors: { type: "array", items: { type: "number" } },
+        excludeKnowledgeIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "循環参照防止: 除外する知識ID"
+        }
+      },
+      required: ["revealedCards"]
+    }
+  }
+];
+
+// ツール実行結果
+interface LookupCardWithKnowledgeResult {
+  card: CatalogEntry;
+  knowledge: {
+    synergies: KnowledgeEntry[];
+    combos: KnowledgeEntry[];
+    counters: KnowledgeEntry[];
+    strategies: KnowledgeEntry[];
+  };
+  // 循環参照防止: 返却した知識ID
+  returnedKnowledgeIds: string[];
+}
+
+interface EstimateOpponentDeckResult {
+  inferredDeckType: string;
+  confidence: number;
+  likelyCards: Array<{
+    cardId: string;
+    cardName: string;
+    probability: number;
+    reason: string;
+  }>;
+  basedOnKnowledge: string[];  // 使用した知識ID
+  warnings: string[];          // 警戒すべきカード
+}
+```
+
+##### 3.6.4.5 循環参照防止
+
+```typescript
+// 循環参照防止戦略
+interface CircularReferencePrevention {
+  // 1. 深度制限: 関連知識の再帰取得は1階層まで
+  maxDepth: 1;
+
+  // 2. 取得済みID追跡
+  fetchedIds: Set<string>;
+
+  // 3. リクエストごとにリセット
+  resetPerRequest: true;
+}
+
+// 安全な知識取得
+function getKnowledgeWithRelated(
+  id: string,
+  store: KnowledgeStore,
+  visited: Set<string> = new Set()
+): KnowledgeEntry & { related: KnowledgeEntry[] } {
+  // 循環参照チェック
+  if (visited.has(id)) {
+    throw new Error(`Circular reference detected: ${id}`);
+  }
+  visited.add(id);
+
+  const entry = store.entries.find(e => e.id === id);
+  if (!entry) throw new Error(`Knowledge not found: ${id}`);
+
+  // 関連知識は1階層のみ（再帰しない）
+  const related = (entry.relatedKnowledgeIds || [])
+    .filter(relId => !visited.has(relId))
+    .map(relId => store.entries.find(e => e.id === relId))
+    .filter((e): e is KnowledgeEntry => e !== undefined);
+
+  return { ...entry, related };
+}
+
+// ツール呼び出し時の循環参照防止
+function handleToolCall(
+  tool: string,
+  params: Record<string, unknown>,
+  context: { excludeIds: string[] }
+): unknown {
+  // 前回の呼び出しで返却した知識IDを除外
+  const excludeIds = new Set([
+    ...(params.excludeKnowledgeIds as string[] || []),
+    ...context.excludeIds
+  ]);
+
+  // 結果に含まれる知識IDを記録
+  const result = executeToolWithExclusion(tool, params, excludeIds);
+
+  // コンテキストに追加（次回呼び出しで除外）
+  if (result.returnedKnowledgeIds) {
+    context.excludeIds.push(...result.returnedKnowledgeIds);
+  }
+
+  return result;
+}
+```
+
+##### 3.6.4.6 プロンプトへの知識注入
+
+```typescript
+// プロンプトへの注入（拡張版）
 function injectKnowledge(
   prompt: string,
-  knowledge: KnowledgeEntry[]
+  knowledge: KnowledgeEntry[],
+  context: { currentCards: string[]; opponentCards: string[] }
 ): string {
   if (knowledge.length === 0) return prompt;
 
-  const knowledgeSection = knowledge
-    .map(k => `- ${k.content.topic}: ${k.content.insight}`)
-    .join("\n");
+  // カテゴリ別に整理
+  const synergies = knowledge.filter(k => k.type === "synergy");
+  const combos = knowledge.filter(k => k.type === "combo");
+  const counters = knowledge.filter(k => k.type === "counter");
+  const strategies = knowledge.filter(k =>
+    ["strategy", "insight", "preference"].includes(k.type)
+  );
 
-  return `${prompt}
+  let knowledgeSection = "## 学習済み知識\n\n";
 
-## ユーザーから学習した知識
-${knowledgeSection}
-`;
+  if (synergies.length > 0) {
+    knowledgeSection += "### シナジー\n";
+    synergies.forEach(k => {
+      knowledgeSection += `- ${k.tags.cardNames?.join(" + ")}: ${k.content.insight}\n`;
+    });
+    knowledgeSection += "\n";
+  }
+
+  if (combos.length > 0) {
+    knowledgeSection += "### コンボ\n";
+    combos.forEach(k => {
+      knowledgeSection += `- ${k.content.topic}: ${k.content.insight}\n`;
+    });
+    knowledgeSection += "\n";
+  }
+
+  if (counters.length > 0) {
+    knowledgeSection += "### 対策\n";
+    counters.forEach(k => {
+      knowledgeSection += `- ${k.content.topic}: ${k.content.insight}\n`;
+    });
+    knowledgeSection += "\n";
+  }
+
+  if (strategies.length > 0) {
+    knowledgeSection += "### 戦略・洞察\n";
+    strategies.forEach(k => {
+      knowledgeSection += `- ${k.content.topic}: ${k.content.insight}\n`;
+    });
+  }
+
+  return `${prompt}\n\n${knowledgeSection}`;
+}
+```
+
+##### 3.6.4.7 自動学習例
+
+```typescript
+// シナジー自動検出例
+function detectSynergyFromEvents(events: GameEventEntry[]): SynergyCandidate | null {
+  // パターン: 連続した効果発動で大きなアドバンテージ
+  const recentEffects = events
+    .filter(e => e.type === "effect")
+    .slice(-5);
+
+  // 例: 「魔将・信玄」+「突撃命令」のシナジー検出
+  // - 信玄の【不屈】発動
+  // - 突撃命令で全体BP+2000
+  // - 信玄が行動権回復後に再度アタック
+
+  const cardIds = new Set<string>();
+  let totalImpact = 0;
+
+  recentEffects.forEach(e => {
+    // 効果からカードIDを抽出（実装詳細は省略）
+    // totalImpact を計算
+  });
+
+  if (cardIds.size >= 2 && totalImpact > SYNERGY_THRESHOLD) {
+    return {
+      cards: Array.from(cardIds),
+      pattern: "連続効果発動",
+      observedCount: 1,
+      effectiveness: totalImpact / MAX_IMPACT,
+      colors: [], // カードから色を取得
+      context: {
+        turn: events[events.length - 1].turn,
+        round: events[events.length - 1].round,
+        boardState: "攻撃フェーズ"
+      }
+    };
+  }
+
+  return null;
 }
 ```
 
@@ -1321,9 +1749,14 @@ const SUMMARIZATION_CONFIG = {
 │   ├── knowledge/                 # 知識ストレージ (LocalStorage)
 │   │   ├── index.ts               # エクスポート
 │   │   ├── types.ts               # Knowledge型定義
-│   │   ├── KnowledgeStore.ts      # LocalStorage管理
+│   │   ├── KnowledgeStore.ts      # LocalStorage管理・インデックス
 │   │   ├── KnowledgeExtractor.ts  # 会話からの知識抽出
-│   │   └── KnowledgeInjector.ts   # プロンプトへの知識注入
+│   │   ├── KnowledgeInjector.ts   # プロンプトへの知識注入
+│   │   ├── AutoLearner.ts         # 自動学習（シナジー・コンボ検出）
+│   │   ├── SynergyDetector.ts     # シナジーパターン検出
+│   │   ├── DeckEstimator.ts       # 相手デッキ推定
+│   │   ├── KnowledgeIndex.ts      # カード・色・タイプ別インデックス
+│   │   └── CircularRefGuard.ts    # 循環参照防止
 │   │
 │   └── prompts/
 │       ├── system.ts              # システムプロンプト
