@@ -60,3 +60,6 @@ export * from './chat';
 
 // Catalog
 export * from './catalog';
+
+// Tactics
+export * from './tactics';
