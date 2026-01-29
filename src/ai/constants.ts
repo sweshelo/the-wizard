@@ -71,3 +71,19 @@ export const CONTEXT_CONFIG = {
   /** イベント要約の最大文字数 */
   MAX_EVENT_SUMMARY_LENGTH: 500,
 } as const;
+
+/**
+ * 世代管理の設定
+ */
+export const GENERATION_CONFIG = {
+  /** board_state の陳腐化ラウンド数 */
+  BOARD_STATE_STALE_ROUNDS: 1,
+  /** strategy の陳腐化ラウンド数 */
+  STRATEGY_STALE_ROUNDS: 2,
+  /** opponent_pattern の陳腐化ラウンド数 */
+  OPPONENT_PATTERN_STALE_ROUNDS: 3,
+  /** deck_analysis の陳腐化ラウンド数 */
+  DECK_ANALYSIS_STALE_ROUNDS: 10,
+  /** デフォルトの陳腐化閾値 */
+  DEFAULT_STALENESS_THRESHOLD: 0.7,
+} as const;

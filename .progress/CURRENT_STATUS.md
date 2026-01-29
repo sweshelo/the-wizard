@@ -7,13 +7,26 @@
 ```
 Phase 1: 基盤構築 (MVP)    [██████████] 100%  COMPLETED
 Phase 2: 推論改善          [██████████] 100%  COMPLETED
-Phase 3: 高度な機能        [░░░░░░░░░░] 0%  NOT_STARTED
-Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
+Phase 3: 高度な機能        [██░░░░░░░░] 25%   IN_PROGRESS
+Phase 4: 最適化            [░░░░░░░░░░] 0%    NOT_STARTED
 ```
 
 ## 現在のフェーズ
 
-**Phase 2: 推論改善** - 完了
+**Phase 3: 高度な機能** - 進行中
+
+## Phase 3 タスク一覧
+
+| タスクID | タスク名                       | 優先度 | 前提条件       | ステータス  |
+| -------- | ------------------------------ | ------ | -------------- | ----------- |
+| 3.1      | コンテキスト管理               | P0     | Phase 2 (完了) | COMPLETED   |
+| 3.2      | 世代管理による陳腐化検出       | P0     | TASK-3.1       | COMPLETED   |
+| 3.3      | デッキ認識・戦略適応           | P0     | TASK-3.2       | NOT_STARTED |
+| 3.4      | コンボ検出・記録               | P1     | TASK-3.3       | NOT_STARTED |
+| 3.5      | 定期分析 (2ラウンドごと、Opus) | P0     | TASK-3.2       | NOT_STARTED |
+| 3.6      | 相手捨札傾向分析               | P1     | TASK-3.5       | NOT_STARTED |
+| 3.7      | バックグラウンド推論           | P1     | TASK-3.5       | NOT_STARTED |
+| 3.8      | 知識ストレージ (LocalStorage)  | P2     | TASK-3.4       | NOT_STARTED |
 
 ## Phase 2 タスク一覧
 
@@ -28,24 +41,26 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 
 ## 最近の活動
 
-| 日時       | タスク                            | ステータス | 担当   |
-| ---------- | --------------------------------- | ---------- | ------ |
-| 2026-01-29 | TASK-2.6: ユーザーフィードバック  | COMPLETED  | Claude |
-| 2026-01-29 | TASK-2.5: ゲーム開始前分析        | COMPLETED  | Claude |
-| 2026-01-29 | TASK-2.4: インターセプト判断      | COMPLETED  | Claude |
-| 2026-01-29 | TASK-2.3: 攻撃/ブロック判断       | COMPLETED  | Claude |
-| 2026-01-29 | TASK-2.2: 戦略プロンプトの洗練    | COMPLETED  | Claude |
-| 2026-01-29 | TASK-2.1: カタログ情報の活用      | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.8: 盤面複雑性評価          | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.7: Chat UI基本実装         | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.6: 基本プロンプト          | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.5: Claude API統合          | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.4: ヒューリスティック      | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.2: WebSocketインターセプト | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.3: StateTranslator         | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.1: AIモジュール基本構造    | COMPLETED  | Claude |
-| 2026-01-29 | TASK-1.0: テスト環境構築          | COMPLETED  | Claude |
-| 2026-01-29 | 作業環境構築                      | COMPLETED  | Claude |
+| 日時       | タスク                             | ステータス | 担当   |
+| ---------- | ---------------------------------- | ---------- | ------ |
+| 2026-01-29 | TASK-3.2: 世代管理による陳腐化検出 | COMPLETED  | Claude |
+| 2026-01-29 | TASK-3.1: コンテキスト管理         | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.6: ユーザーフィードバック   | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.5: ゲーム開始前分析         | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.4: インターセプト判断       | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.3: 攻撃/ブロック判断        | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.2: 戦略プロンプトの洗練     | COMPLETED  | Claude |
+| 2026-01-29 | TASK-2.1: カタログ情報の活用       | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.8: 盤面複雑性評価           | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.7: Chat UI基本実装          | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.6: 基本プロンプト           | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.5: Claude API統合           | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.4: ヒューリスティック       | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.2: WebSocketインターセプト  | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.3: StateTranslator          | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.1: AIモジュール基本構造     | COMPLETED  | Claude |
+| 2026-01-29 | TASK-1.0: テスト環境構築           | COMPLETED  | Claude |
+| 2026-01-29 | 作業環境構築                       | COMPLETED  | Claude |
 
 ## ブロッカー
 
@@ -191,9 +206,35 @@ Phase 4: 最適化            [░░░░░░░░░░] 0%  NOT_STARTED
 
 ## テスト状況
 
-- 全313テストがパス
-- 2311 expect() calls
+- 全398テストがパス
+- 2438 expect() calls
 - Bun test で実行
+
+---
+
+## Phase 3 詳細
+
+| タスクID | タスク名                 | ステータス  | 進捗 |
+| -------- | ------------------------ | ----------- | ---- |
+| 3.1      | コンテキスト管理         | COMPLETED   | 100% |
+| 3.2      | 世代管理による陳腐化検出 | COMPLETED   | 100% |
+| 3.3      | デッキ認識・戦略適応     | NOT_STARTED | 0%   |
+| 3.4      | コンボ検出・記録         | NOT_STARTED | 0%   |
+| 3.5      | 定期分析                 | NOT_STARTED | 0%   |
+| 3.6      | 相手捨札傾向分析         | NOT_STARTED | 0%   |
+| 3.7      | バックグラウンド推論     | NOT_STARTED | 0%   |
+| 3.8      | 知識ストレージ           | NOT_STARTED | 0%   |
+
+### TASK-3.1: コンテキスト管理
+
+- `src/ai/thread/ContextWindowManager.ts` - コンテキストウィンドウ管理
+- `src/ai/thread/ThreadSummarizer.ts` - スレッド要約
+
+### TASK-3.2: 世代管理による陳腐化検出
+
+- `src/ai/context/GenerationManager.ts` - 世代管理クラス
+- `src/ai/context/index.ts` - エクスポート
+- `src/ai/constants.ts` - GENERATION_CONFIG追加
 
 ---
 
