@@ -1,7 +1,8 @@
 'use client';
 
 import { useContext } from 'react';
-import { CardUsageEffectContext, CardUsageEffectContextType } from './context';
+import type { CardUsageEffectContextType } from './context';
+import { CardUsageEffectContext } from './context';
 
 // Custom hook to use the card usage effect context
 export const useCardUsageEffect = (): CardUsageEffectContextType => {

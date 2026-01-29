@@ -1,7 +1,8 @@
 'use client';
 
 import { useContext } from 'react';
-import { CardEffectDialogContext, CardEffectDialogContextType } from './context';
+import type { CardEffectDialogContextType } from './context';
+import { CardEffectDialogContext } from './context';
 
 // Custom hook to use the card effect dialog context
 export const useCardEffectDialog = (): CardEffectDialogContextType => {

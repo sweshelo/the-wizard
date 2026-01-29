@@ -1,4 +1,4 @@
-import { Rule } from '@/submodule/suit/types';
+import type { Rule } from '@/submodule/suit/types';
 
 // Extend the Rule type to include the debug.enable property
 export type ExtendedRule = Rule & {

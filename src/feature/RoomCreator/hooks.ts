@@ -1,8 +1,13 @@
 import { useWebSocket } from '@/hooks/websocket/hooks';
 import { LocalStorageHelper } from '@/service/local-storage';
-import { Message, RoomOpenRequestPayload, RoomOpenResponsePayload } from '@/submodule/suit/types';
+import type {
+  Message,
+  RoomOpenRequestPayload,
+  RoomOpenResponsePayload,
+} from '@/submodule/suit/types';
 import { useRouter } from 'next/navigation';
-import { FormEvent, FormEventHandler, useCallback } from 'react';
+import type { FormEvent, FormEventHandler } from 'react';
+import { useCallback } from 'react';
 
 interface Response {
   handleSubmit: FormEventHandler<HTMLFormElement>;
@@ -14,7 +19,7 @@ export const useRoomCreator = (): Response => {
 
   const handleSubmit = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
-      if (websocket == null) return;
+      if (!websocket) return;
 
       e.preventDefault();
 
@@ -23,7 +28,8 @@ export const useRoomCreator = (): Response => {
       const formValues = Object.fromEntries(formData);
 
       // Extract the room name
-      const roomName = formValues.name as string;
+      const roomNameValue = formValues.name;
+      const roomName = typeof roomNameValue === 'string' ? roomNameValue : '';
       console.log('Form values:', formValues);
 
       try {

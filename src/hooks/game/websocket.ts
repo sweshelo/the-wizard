@@ -2,9 +2,8 @@
 
 import { useCallback } from 'react';
 import { useWebSocket } from '../websocket/hooks';
-import {
+import type {
   ContinuePayload,
-  createMessage,
   EvolveDrivePayload,
   ICard,
   IUnit,
@@ -13,6 +12,7 @@ import {
   OverridePayload,
   UnitDrivePayload,
 } from '@/submodule/suit/types';
+import { createMessage } from '@/submodule/suit/types';
 import { LocalStorageHelper } from '@/service/local-storage';
 import { useTimer } from '@/feature/Timer/hooks';
 

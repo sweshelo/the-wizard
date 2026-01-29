@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
-import { StatusChangeType } from '@/component/ui/StatusChangeEffect';
+import type { ReactNode } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
+import type { StatusChangeType } from '@/component/ui/StatusChangeEffect';
 
 export interface StatusChange {
   type: StatusChangeType;

@@ -7,13 +7,17 @@ import { GiCardDraw } from 'react-icons/gi';
 import { useCardsDialog } from '@/hooks/cards-dialog';
 import { MyTriggerZone } from '../MyTriggerZone';
 import { useMyArea } from './hooks';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { MyTrash } from '../MyTrash';
 import { LocalStorageHelper } from '@/service/local-storage';
-import { ICard } from '@/submodule/suit/types';
+import type { IAtom, ICard } from '@/submodule/suit/types';
 import { useDeck, usePlayer } from '@/hooks/game/hooks';
 import { PurpleGaugeView } from '@/component/ui/purpleGaugeView';
 import { JokerArea } from '../JokerArea';
+
+function isICard(atom: IAtom): atom is ICard {
+  return 'catalogId' in atom && 'lv' in atom;
+}
 
 export const MyArea = () => {
   const { openCardsDialog } = useCardsDialog();
@@ -22,9 +26,14 @@ export const MyArea = () => {
   const deck = useDeck(playerId);
   const self = usePlayer(playerId);
 
+  const deckAsCards = useMemo(() => {
+    if (!deck) return [];
+    return deck.filter(isICard);
+  }, [deck]);
+
   const handleDeckClick = useCallback(() => {
-    openCardsDialog((deck ?? []) as ICard[], 'あなたのデッキ');
-  }, [openCardsDialog, deck]);
+    openCardsDialog(deckAsCards, 'あなたのデッキ');
+  }, [openCardsDialog, deckAsCards]);
   useMyArea();
 
   return (

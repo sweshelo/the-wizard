@@ -1,5 +1,5 @@
-import { useUnitSelection } from "@/hooks/unit-selection";
-import { IUnit } from "@/submodule/suit/types";
+import { useUnitSelection } from '@/hooks/unit-selection';
+import type { IUnit } from '@/submodule/suit/types';
 
 interface UnitSelectionButtonProps {
   unitId: string;
@@ -9,32 +9,29 @@ export const UnitSelectionButton = ({ unitId }: UnitSelectionButtonProps) => {
   const { candidate, selectionMode, handleSelected } = useUnitSelection();
 
   // Don't render if this unit is not the selected one
-  if (
-    !candidate?.find((unit: IUnit) => unit.id === unitId) ||
-    !handleSelected
-  ) {
+  if (!candidate?.find((unit: IUnit) => unit.id === unitId) || !handleSelected) {
     return null;
   }
 
   // Determine button text and color based on selection mode
   const buttonConfig = {
     select: {
-      text: "選択",
-      bgColor: "bg-white",
-      textColor: "text-black",
-      borderColor: "border-gray-500",
+      text: '選択',
+      bgColor: 'bg-white',
+      textColor: 'text-black',
+      borderColor: 'border-gray-500',
     },
     target: {
-      text: "ターゲット",
-      bgColor: "bg-red-500",
-      textColor: "text-white",
-      borderColor: "border-red-700",
+      text: 'ターゲット',
+      bgColor: 'bg-red-500',
+      textColor: 'text-white',
+      borderColor: 'border-red-700',
     },
     block: {
-      text: "ブロック",
-      bgColor: "bg-blue-500",
-      textColor: "text-white",
-      borderColor: "border-blue-700",
+      text: 'ブロック',
+      bgColor: 'bg-blue-500',
+      textColor: 'text-white',
+      borderColor: 'border-blue-700',
     },
   };
 
@@ -47,7 +44,7 @@ export const UnitSelectionButton = ({ unitId }: UnitSelectionButtonProps) => {
           shadow-md border ${config.borderColor} hover:brightness-105 w-full opacity-80`}
         onClick={() => {
           handleSelected(unitId);
-          console.log("button clicked");
+          console.log('button clicked');
         }}
       >
         {config.text}

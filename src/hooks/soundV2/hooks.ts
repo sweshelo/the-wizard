@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useSoundManagerV2, SoundKey } from './context';
+import type { SoundKey } from './context';
+import { useSoundManagerV2 } from './context';
 
 export const useSoundV2 = () => {
   const { play, playBgm, stopBgm, isAudioReady, setBgmVolume, getBgmVolume, isBgmPlaying } =

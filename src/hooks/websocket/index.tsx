@@ -1,7 +1,8 @@
 'use client';
 
 import { webSocketService } from '@/service/websocket';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { ErrorOverlayContext } from '@/hooks/error-overlay';
 
 export type WebSocketContextType = {

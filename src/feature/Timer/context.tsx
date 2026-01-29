@@ -2,7 +2,8 @@
 
 import { useRef, useCallback } from 'react';
 import { useTimer as useTimerHook } from 'react-timer-hook';
-import { TimerContext, TimerContextType, TimerProviderProps } from './hooks';
+import type { TimerContextType, TimerProviderProps } from './hooks';
+import { TimerContext } from './hooks';
 
 export const TimerProvider = ({ children, initialTime = 60 }: TimerProviderProps) => {
   // タイマー開始時刻

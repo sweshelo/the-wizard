@@ -1,4 +1,4 @@
-import {
+import type {
   Message,
   RequestPayload,
   ResponsePayload,
@@ -29,24 +29,32 @@ class WebSocketService extends EventEmitter {
     });
 
     this.socket.addEventListener('message', (event: MessageEvent<string>) => {
-      const message = JSON.parse(event.data);
+      const parsed: unknown = JSON.parse(event.data);
+      if (typeof parsed !== 'object' || parsed === null) {
+        console.error('Invalid message format');
+        return;
+      }
+      const message = parsed as Message;
       console.log(message);
 
       // エラー通知の処理
       if (message.action?.type === 'error') {
-        this.handleError(message.payload);
+        const payload = message.payload as unknown as ErrorPayload;
+        this.handleError(payload);
         return;
       }
 
       // プレイヤー切断通知の処理
       if (message.action?.type === 'disconnected') {
-        this.handlePlayerDisconnected(message.payload);
+        const payload = message.payload as unknown as PlayerDisconnectedPayload;
+        this.handlePlayerDisconnected(payload);
         return;
       }
 
       // プレイヤー再接続通知の処理
       if (message.action?.type === 'reconnected') {
-        this.handlePlayerReconnected(message.payload);
+        const payload = message.payload as unknown as PlayerReconnectedPayload;
+        this.handlePlayerReconnected(payload);
         return;
       }
 
@@ -100,15 +108,19 @@ class WebSocketService extends EventEmitter {
     return await new Promise((resolve, reject) => {
       const handler = (e: MessageEvent): void => {
         try {
-          const response = JSON.parse(e.data) as Message<R>;
+          const parsed: unknown = JSON.parse(String(e.data));
+          if (typeof parsed !== 'object' || parsed === null) {
+            return;
+          }
+          const response = parsed as Message<R>;
           const { payload } = response;
           if ('requestId' in payload) {
             this.socket.removeEventListener('message', handler);
             resolve(response);
           }
-        } catch (e) {
+        } catch (err) {
           this.socket.removeEventListener('message', handler);
-          reject(e);
+          reject(err);
         }
       };
 

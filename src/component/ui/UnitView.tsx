@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { IUnit } from '@/submodule/suit/types';
+import type { IUnit } from '@/submodule/suit/types';
 import { useDroppable } from '@dnd-kit/core';
 
 import { BPView } from './BPView';
@@ -41,7 +41,9 @@ const UnitViewComponent = ({ unit, isOwnUnit = false }: UnitViewProps) => {
 
   // ユニットの位置情報をコンテキストに登録
   useEffect(() => {
-    registerUnitRef(unit.id, unitRef as React.RefObject<HTMLDivElement>);
+    if (unitRef.current) {
+      registerUnitRef(unit.id, unitRef);
+    }
   }, [unit.id, registerUnitRef]);
 
   const color: string =

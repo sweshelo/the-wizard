@@ -10,15 +10,14 @@ import { LifeView } from '@/component/ui/LifeView';
 import { colorTable } from '@/helper/color';
 import { useRule, usePlayers, usePlayer, useSelfTheme, useOpponentTheme } from '@/hooks/game/hooks';
 import { MyArea } from '../MyArea';
+import type { CollisionDetection, ClientRect } from '@dnd-kit/core';
 import {
   DndContext,
   PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
-  CollisionDetection,
   rectIntersection,
-  ClientRect,
 } from '@dnd-kit/core';
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { useGameComponentHook } from './hook';
@@ -30,7 +29,7 @@ import { useCardsDialog } from '@/hooks/cards-dialog';
 import { useSystemContext } from '@/hooks/system/hooks';
 import { Field } from '../Field';
 import { MyFieldWrapper } from '../MyFieldWrapper';
-import { ICard } from '@/submodule/suit/types';
+import type { IAtom, ICard } from '@/submodule/suit/types';
 import { Timer } from '../Timer';
 import { LocalStorageHelper } from '@/service/local-storage';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
@@ -45,6 +44,10 @@ import { LoadingOverlay } from '@/component/ui/LoadingOverlay';
 import { ErrorOverlay } from '@/component/ui/ErrorOverlay';
 import { useErrorOverlay } from '@/hooks/error-overlay';
 import { TurnChangeEffect } from '@/component/ui/TurnChangeEffect';
+
+function isICard(atom: IAtom): atom is ICard {
+  return 'catalogId' in atom && 'lv' in atom;
+}
 
 interface RoomProps {
   id: string;
@@ -118,11 +121,11 @@ export const Game = ({ id }: RoomProps) => {
 
   const screenRef = useRef<HTMLDivElement>(null);
   const handleFullScreen = useCallback(() => {
-    screenRef.current?.requestFullscreen();
+    void screenRef.current?.requestFullscreen();
   }, []);
 
   const isMatching = useMemo(() => {
-    return opponentId == '';
+    return opponentId === '';
   }, [opponentId]);
 
   // 切断ハンドラーを設定
@@ -207,7 +210,7 @@ export const Game = ({ id }: RoomProps) => {
               </div>
               {/* 対戦相手の手札エリア */}
               <div className="flex justify-center gap-1">
-                {[...Array(rule.player.max.hand)].map((_, index) => {
+                {Array.from({ length: rule.player.max.hand }).map((_, index) => {
                   const card = opponent?.hand?.[index];
                   return card ? (
                     'catalogId' in card ? (
@@ -228,7 +231,7 @@ export const Game = ({ id }: RoomProps) => {
               </div>
               <div className="flex flex-col gap-1 justify-end">
                 <div className="flex gap-1">
-                  {[...Array(rule.player.max.trigger)].map((_, index) => {
+                  {Array.from({ length: rule.player.max.trigger }).map((_, index) => {
                     const card = opponent?.trigger[index];
                     return card ? (
                       'catalogId' in card ? (
@@ -275,7 +278,7 @@ export const Game = ({ id }: RoomProps) => {
                     <div
                       className="flex justify-center items-center cursor-pointer w-full h-full"
                       onClick={() => {
-                        openCardsDialog(opponent.deck as ICard[], '対戦相手のデッキ');
+                        openCardsDialog(opponent.deck.filter(isICard), '対戦相手のデッキ');
                       }}
                     >
                       {<GiCardDraw color="cyan" size={40} />}
@@ -288,8 +291,8 @@ export const Game = ({ id }: RoomProps) => {
                       className="flex justify-center items-center cursor-pointer w-full h-full"
                       onClick={() => {
                         openCardsDialog(state => {
-                          const trash = (state.players?.[opponentId]?.trash ?? []) as ICard[];
-                          const deleted = (state.players?.[opponentId]?.delete ?? []) as ICard[];
+                          const trash = state.players?.[opponentId]?.trash ?? [];
+                          const deleted = state.players?.[opponentId]?.delete ?? [];
                           return [
                             ...[...trash].reverse(),
                             ...deleted.map(card => ({ ...card, deleted: true })),

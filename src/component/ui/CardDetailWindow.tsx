@@ -5,20 +5,13 @@ import classNames from 'classnames';
 import { defaultUIColors, getColorCode } from '@/helper/color';
 import Image from 'next/image';
 import { useSystemContext } from '@/hooks/system/hooks';
-import {
-  Dispatch,
-  MouseEventHandler,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import type { Dispatch, MouseEventHandler, SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import keywordsData from '@/submodule/suit/catalog/keywords.json';
 import { BattleIconDetail } from './BattleIconsView';
 import { Tooltip } from 'react-tooltip';
 import DOMPurify from 'dompurify';
-import { ICard } from '@/submodule/suit/types';
+import type { ICard } from '@/submodule/suit/types';
 import { getImageUrl } from '@/helper/image';
 
 interface LevelProps {

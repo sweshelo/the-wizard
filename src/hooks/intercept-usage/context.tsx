@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
-import { ICard } from "@/submodule/suit/types";
-import { createContext, ReactNode, useState, useCallback, useRef } from "react";
+import type { ICard } from '@/submodule/suit/types';
+import type { ReactNode } from 'react';
+import { createContext, useState, useCallback, useRef } from 'react';
 // No longer need to import useWebSocketGame since we don't send messages directly
 
 // Context type definition for intercept usage functionality
@@ -14,7 +15,7 @@ export interface InterceptUsageContextType {
     intercepts: ICard[],
     timeLimit?: number,
     onActivate?: (card: ICard) => void,
-    onCancel?: () => void,
+    onCancel?: () => void
   ) => void;
 
   // Function to clear the available intercepts
@@ -31,20 +32,14 @@ export interface InterceptUsageContextType {
 }
 
 // Create the context with undefined default
-export const InterceptUsageContext = createContext<
-  InterceptUsageContextType | undefined
->(undefined);
+export const InterceptUsageContext = createContext<InterceptUsageContextType | undefined>(
+  undefined
+);
 
 // Provider component that wraps the application or relevant part of it
-export const InterceptUsageProvider = ({
-  children,
-}: {
-  children: ReactNode;
-}) => {
+export const InterceptUsageProvider = ({ children }: { children: ReactNode }) => {
   const [availableIntercepts, setAvailableIntercepts] = useState<ICard[]>([]);
-  const [interceptTimeLimit, setInterceptTimeLimit] = useState<number | null>(
-    null,
-  );
+  const [interceptTimeLimit, setInterceptTimeLimit] = useState<number | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const onActivateRef = useRef<((card: ICard) => void) | undefined>(undefined);
   const onCancelRef = useRef<(() => void) | undefined>(undefined);
@@ -66,7 +61,7 @@ export const InterceptUsageProvider = ({
       intercepts: ICard[],
       timeLimit?: number,
       onActivate?: (card: ICard) => void,
-      onCancel?: () => void,
+      onCancel?: () => void
     ) => {
       // Store callback refs
       onActivateRef.current = onActivate;
@@ -89,7 +84,7 @@ export const InterceptUsageProvider = ({
         setInterceptTimeLimit(null);
       }
     },
-    [clearAvailableIntercepts],
+    [clearAvailableIntercepts]
   );
 
   // Function to cancel intercept selection
@@ -107,9 +102,7 @@ export const InterceptUsageProvider = ({
   const activateIntercept = useCallback(
     (interceptId: string) => {
       // Find the selected card
-      const selectedCard = availableIntercepts.find(
-        (card) => card.id === interceptId,
-      );
+      const selectedCard = availableIntercepts.find(card => card.id === interceptId);
 
       // Call the activate callback if provided with the selected card
       if (selectedCard && onActivateRef.current) {
@@ -119,7 +112,7 @@ export const InterceptUsageProvider = ({
       // Clear the available intercepts after activation
       clearAvailableIntercepts();
     },
-    [availableIntercepts, clearAvailableIntercepts],
+    [availableIntercepts, clearAvailableIntercepts]
   );
 
   // The value to be provided by the context
@@ -133,8 +126,6 @@ export const InterceptUsageProvider = ({
   };
 
   return (
-    <InterceptUsageContext.Provider value={contextValue}>
-      {children}
-    </InterceptUsageContext.Provider>
+    <InterceptUsageContext.Provider value={contextValue}>{children}</InterceptUsageContext.Provider>
   );
 };

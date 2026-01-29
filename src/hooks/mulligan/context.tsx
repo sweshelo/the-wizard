@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, ReactNode, useContext, useState, useRef, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
 
 interface MulliganContextType {
   showMulligan: boolean;
@@ -23,10 +24,11 @@ export const MulliganProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Global timer that runs continuously in the background
   useEffect(() => {
-    if (timerStart.current === null || !timerRunning) return;
+    const startTime = timerStart.current;
+    if (startTime === null || !timerRunning) return;
 
     const intervalId = setInterval(() => {
-      const elapsedSeconds = (Date.now() - timerStart.current!) / 1000;
+      const elapsedSeconds = (Date.now() - startTime) / 1000;
       const newTimeLeft = Math.max(initialTime.current - elapsedSeconds, 0);
 
       setTimeLeft(parseFloat(newTimeLeft.toFixed(2)));

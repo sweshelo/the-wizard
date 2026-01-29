@@ -168,7 +168,7 @@ export const SoundManagerV2Provider: React.FC<{ children: React.ReactNode }> = (
 
         // Check if context is in suspended state (browser autoplay policy)
         if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume();
+          void audioContextRef.current.resume();
         }
 
         setIsAudioReady(true);

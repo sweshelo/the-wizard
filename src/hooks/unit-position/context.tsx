@@ -1,13 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useRef, RefObject } from 'react';
+import type { RefObject } from 'react';
+import React, { createContext, useContext, useRef } from 'react';
 
 interface UnitRefs {
-  [unitId: string]: RefObject<HTMLDivElement>;
+  [unitId: string]: RefObject<HTMLDivElement | null>;
 }
 
 interface UnitPositionContextType {
-  registerUnitRef: (unitId: string, ref: RefObject<HTMLDivElement>) => void;
+  registerUnitRef: (unitId: string, ref: RefObject<HTMLDivElement | null>) => void;
   getUnitCenterPosition: (unitId: string) => { x: number; y: number } | undefined;
 }
 
@@ -16,7 +17,7 @@ const UnitPositionContext = createContext<UnitPositionContextType | undefined>(u
 export const UnitPositionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const unitRefsRef = useRef<UnitRefs>({});
 
-  const registerUnitRef = (unitId: string, ref: RefObject<HTMLDivElement>) => {
+  const registerUnitRef = (unitId: string, ref: RefObject<HTMLDivElement | null>) => {
     unitRefsRef.current[unitId] = ref;
   };
 

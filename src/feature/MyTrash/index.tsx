@@ -2,7 +2,6 @@ import { CardsCountView } from '@/component/ui/CardsCountView';
 import { HighlightBoarder } from '@/component/ui/HighlightBorder';
 import { useCardsDialog } from '@/hooks/cards-dialog';
 import { useTrash } from '@/hooks/game/hooks';
-import { ICard } from '@/submodule/suit/types';
 import { useSystemContext } from '@/hooks/system/hooks';
 import { LocalStorageHelper } from '@/service/local-storage';
 import { useDroppable } from '@dnd-kit/core';
@@ -20,8 +19,8 @@ export const MyTrash = () => {
   // メモ化されたイベントハンドラ - Zustandセレクタを使用して捨札を購読
   const handleTrashClick = useCallback(() => {
     openCardsDialog(state => {
-      const playerTrash = (state.players?.[playerId]?.trash ?? []) as ICard[];
-      const playerDeleted = (state.players?.[playerId]?.delete ?? []) as ICard[];
+      const playerTrash = state.players?.[playerId]?.trash ?? [];
+      const playerDeleted = state.players?.[playerId]?.delete ?? [];
       return [
         ...[...playerTrash].reverse(),
         ...playerDeleted

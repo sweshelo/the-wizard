@@ -1,7 +1,8 @@
 import { useGameStore } from './context';
 import { useShallow } from 'zustand/shallow';
 import { LocalStorageHelper } from '@/service/local-storage';
-import { themeColors, PlayerTheme } from '@/helper/color';
+import type { PlayerTheme } from '@/helper/color';
+import { themeColors } from '@/helper/color';
 
 export const usePlayer = (playerId: string) => {
   const [player] = useGameStore(useShallow(state => [state.players?.[playerId]]));

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StatusChange, useStatusChange } from '@/hooks/status-change';
+import type { StatusChange } from '@/hooks/status-change';
+import { useStatusChange } from '@/hooks/status-change';
 
 export type StatusChangeType = 'damage' | 'level' | 'bp' | 'base-bp' | 'block';
 
@@ -169,7 +170,7 @@ export const StatusChangeEffect: React.FC<StatusChangeEffectProps> = ({
           transition: 'all 0.3s ease-out',
         }}
       >
-        <DisplayContent type={type} value={value as number} />
+        <DisplayContent type={type} value={value} />
       </div>
     </div>
   );

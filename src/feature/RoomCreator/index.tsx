@@ -15,7 +15,7 @@ import { PlayerSettings } from './components/PlayerSettings';
 import { DebugSettings } from './components/DebugSettings';
 import { MiscSettings } from './components/MiscSettings';
 import { JokerSettings } from './components/JokerSettings';
-import { RoomCreatorFormParams } from './type';
+import type { RoomCreatorFormParams } from './type';
 import { DEFAULT_ROOM_SETTINGS } from '../../constants/room';
 
 export const RoomCreator = () => {

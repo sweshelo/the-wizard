@@ -1,7 +1,8 @@
 'use client';
 
 import { useContext } from 'react';
-import { TurnChangeEffectContext, TurnChangeEffectContextType } from './context';
+import type { TurnChangeEffectContextType } from './context';
+import { TurnChangeEffectContext } from './context';
 
 export const useTurnChangeEffect = (): TurnChangeEffectContextType => {
   const context = useContext(TurnChangeEffectContext);

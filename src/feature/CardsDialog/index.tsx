@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useCardsDialog } from '@/hooks/cards-dialog';
-import { ICard } from '@/submodule/suit/types';
+import type { ICard } from '@/submodule/suit/types';
 import { ProgressConfirmButton } from '@/component/ui/ProgressConfirmButton';
 import { CardsDialogView } from '@/component/ui/CardsDialog';
 

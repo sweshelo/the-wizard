@@ -1,7 +1,7 @@
 import { RoomCreator } from '@/feature/RoomCreator';
 import { RoomEntrance } from '@/feature/RoomEntrance';
 import { EntranceMenu } from '@/feature/EntranceMenu';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {

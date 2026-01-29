@@ -6,12 +6,17 @@ import { useTrigger, useRule } from '@/hooks/game/hooks';
 import { useInterceptUsage } from '@/hooks/intercept-usage';
 import { LocalStorageHelper } from '@/service/local-storage';
 import master from '@/submodule/suit/catalog/catalog';
-import { ICard } from '@/submodule/suit/types';
+import type { ICard } from '@/submodule/suit/types';
+
+function isICardArray(value: unknown): value is ICard[] {
+  return Array.isArray(value) && value.every(item => 'catalogId' in item && 'lv' in item);
+}
 
 export const MyTriggerZoneBody = () => {
   const { availableIntercepts, activateIntercept } = useInterceptUsage();
   const playerId = LocalStorageHelper.playerId();
-  const trigger = (useTrigger(playerId) as ICard[]) ?? [];
+  const rawTrigger = useTrigger(playerId);
+  const trigger = isICardArray(rawTrigger) ? rawTrigger : [];
   const rule = useRule();
 
   return (

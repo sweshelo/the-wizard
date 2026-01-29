@@ -4,10 +4,11 @@ import { CardDetailWindow } from '@/component/ui/CardDetailWindow';
 import { CardView } from '@/component/ui/CardView';
 import { defaultUIColors } from '@/helper/color';
 import master from '@/submodule/suit/catalog/catalog';
-import { ICard, Catalog } from '@/submodule/suit/types';
+import type { ICard, Catalog } from '@/submodule/suit/types';
 import { useCallback, useEffect, useMemo, useState, memo, useRef, useLayoutEffect } from 'react';
 import { DeckSaveDialog, DeckLoadDialog } from './DeckDialogs';
-import { LocalStorageHelper, DeckData } from '@/service/local-storage';
+import type { DeckData } from '@/service/local-storage';
+import { LocalStorageHelper } from '@/service/local-storage';
 import { DeckPreview } from './DeckPreview';
 import { useSearchParams } from 'next/navigation';
 import { STARTER_DECK } from '@/constants/deck';
@@ -881,8 +882,8 @@ export const DeckBuilder = ({ implementedIds }: DeckBuilderProps) => {
       {isPreviewOpen && (
         <DeckPreview
           deck={{
-            cards: deck.map(id => ({ catalogId: id }) as ICard),
-            joker: jokers.map(id => ({ id }) as ICard),
+            cards: deck.map(id => ({ catalogId: id })),
+            joker: jokers.map(id => ({ id })),
           }}
           onClose={() => setIsPreviewOpen(false)}
         />

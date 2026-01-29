@@ -91,8 +91,17 @@ export const defaultUIColors = {
 };
 
 // Color mapping function for card colors
+type CardColorKey = keyof typeof colorTable.cardColors;
+
+function isCardColorKey(color: number): color is CardColorKey {
+  return color in colorTable.cardColors;
+}
+
 export const getColorCode = (color: number) => {
-  return colorTable.cardColors[color as keyof typeof colorTable.cardColors] || 'bg-gray-400';
+  if (isCardColorKey(color)) {
+    return colorTable.cardColors[color];
+  }
+  return 'bg-gray-400';
 };
 
 // Helper to get UI colors
@@ -103,12 +112,13 @@ export const getUIColor = (colorPath: string): string | undefined => {
   // Navigate through the colorTable object
   let result: unknown = colorTable;
   for (const part of parts) {
-    if (
-      result &&
-      typeof result === 'object' &&
-      Object.prototype.hasOwnProperty.call(result, part)
-    ) {
-      result = (result as Record<string, unknown>)[part];
+    if (result && typeof result === 'object' && result !== null) {
+      const obj = result as Record<string, unknown>;
+      if (Object.prototype.hasOwnProperty.call(obj, part)) {
+        result = obj[part];
+      } else {
+        return undefined;
+      }
     } else {
       return undefined;
     }

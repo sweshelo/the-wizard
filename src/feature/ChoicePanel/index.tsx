@@ -4,7 +4,7 @@ import { LocalStorageHelper } from '@/service/local-storage';
 
 // 秒数を「00"00」形式（小数点2桁）にフォーマット
 function formatRemainTime(sec: number | null): string {
-  if (sec == null) return '--"--';
+  if (sec === null) return '--"--';
   const s = Math.floor(sec);
   const cs = Math.floor((sec - s) * 100);
   return `${s.toString().padStart(2, '0')}"${cs.toString().padStart(2, '0')}`;

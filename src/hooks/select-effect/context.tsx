@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
+import type { ReactNode } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 
 export interface SelectEffectContextType {
   targetUnitIds: string[]; // 複数ユニットが同時に選択エフェクト可能

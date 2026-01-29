@@ -1,10 +1,15 @@
 import { useWebSocketGame } from '@/hooks/game';
 import { useSystemContext } from '@/hooks/system/hooks';
 import { useHand, useField } from '@/hooks/game/hooks';
-import { ICard, IUnit } from '@/submodule/suit/types';
-import { useDndMonitor, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import type { ICard, IAtom } from '@/submodule/suit/types';
+import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
+import { useDndMonitor } from '@dnd-kit/core';
 import { LocalStorageHelper } from '@/service/local-storage';
 import catalog from '@/submodule/suit/catalog/catalog';
+
+function isICard(atom: IAtom): atom is ICard {
+  return 'catalogId' in atom && 'lv' in atom;
+}
 
 export const useMyArea = () => {
   const { activeCard, setActiveCard } = useSystemContext();
@@ -14,7 +19,8 @@ export const useMyArea = () => {
   const currentPlayerId = LocalStorageHelper.playerId();
 
   // Get player's hand and field for evolution handling
-  const hand = useHand(currentPlayerId) || [];
+  const rawHand = useHand(currentPlayerId) || [];
+  const hand = rawHand.filter(isICard);
   const field = useField(currentPlayerId) || [];
   useDndMonitor({
     onDragStart(e: DragStartEvent) {
@@ -22,40 +28,54 @@ export const useMyArea = () => {
     },
     onDragEnd(e: DragEndEvent) {
       const { over } = e;
-      const cardSource = e.active.data.current?.source;
+      const cardSource: string | undefined = e.active.data.current?.source;
+      const activeCardType: string | undefined = e.active.data.current?.type;
       switch (over?.data.current?.type) {
         case 'field':
           {
             const isJokerBySource = cardSource === 'joker';
-            const isJokerByType = catalog.get(e.active.data.current?.type)?.type === 'joker';
-            if (isJokerBySource || isJokerByType) {
-              jokerDrive({ target: activeCard?.id as string });
-            } else {
-              unitDrive({ target: activeCard?.id as string });
+            const isJokerByType = activeCardType
+              ? catalog.get(activeCardType)?.type === 'joker'
+              : false;
+            if (activeCard?.id) {
+              const targetId = String(activeCard.id);
+              if (isJokerBySource || isJokerByType) {
+                jokerDrive({ target: targetId });
+              } else {
+                unitDrive({ target: targetId });
+              }
             }
           }
           break;
         case 'card':
-          override({
-            target: activeCard?.id as string,
-            parent: over.id as string,
-          });
+          if (activeCard?.id && typeof over.id === 'string') {
+            override({
+              target: String(activeCard.id),
+              parent: over.id,
+            });
+          }
           break;
         case 'trigger-zone':
-          setTrigger({ target: { id: activeCard?.id } as ICard });
+          if (activeCard?.id) {
+            setTrigger({ target: { id: String(activeCard.id), catalogId: '', lv: 1 } });
+          }
           break;
         case 'trash':
-          discard({ target: { id: activeCard?.id } as ICard });
+          if (activeCard?.id) {
+            discard({ target: { id: String(activeCard.id), catalogId: '', lv: 1 } });
+          }
           break;
         case 'unit':
           {
             // Evolution handling
-            const draggedCardId = activeCard?.id as string;
-            const targetUnitId = over.data.current.unitId as string;
+            const draggedCardId = activeCard?.id ? String(activeCard.id) : undefined;
+            const targetUnitId: string | undefined = over.data.current?.unitId;
+
+            if (!draggedCardId || !targetUnitId) break;
 
             // Find the corresponding card and unit
-            const handCard = hand.find(card => card.id === draggedCardId) as ICard | undefined;
-            const fieldUnit = field.find(unit => unit.id === targetUnitId) as IUnit | undefined;
+            const handCard = hand.find(card => card.id === draggedCardId);
+            const fieldUnit = field.find(unit => unit.id === targetUnitId);
 
             if (handCard && fieldUnit) {
               // Get catalog entries

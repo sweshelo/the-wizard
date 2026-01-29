@@ -1,5 +1,5 @@
 import React from 'react';
-import { IDelta } from '@/submodule/suit/types/game/card';
+import type { IDelta } from '@/submodule/suit/types/game/card';
 import { Tooltip } from 'react-tooltip';
 
 interface CountersViewProps {

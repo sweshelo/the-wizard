@@ -2,8 +2,8 @@
 
 import { NumberInput } from '@/component/interface/numberInput';
 import { SettingsGroup } from '@/component/interface/settingsGroup';
-import { UseFormRegister } from 'react-hook-form';
-import { RoomCreatorFormParams } from '../type';
+import type { UseFormRegister } from 'react-hook-form';
+import type { RoomCreatorFormParams } from '../type';
 import { DEFAULT_ROOM_SETTINGS } from '../../../constants/room';
 
 interface MaxSettingsProps {

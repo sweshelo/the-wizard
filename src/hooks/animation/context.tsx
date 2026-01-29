@@ -1,7 +1,8 @@
 'use client';
 
-import React, { createContext, useState, useCallback, ReactNode } from 'react';
-import { AnimationRegistryEntry, EffectType } from './types';
+import type { ReactNode } from 'react';
+import React, { createContext, useState, useCallback } from 'react';
+import type { AnimationRegistryEntry, EffectType } from './types';
 
 export interface AnimationContextType {
   // アクティブなアニメーションの登録と追跡

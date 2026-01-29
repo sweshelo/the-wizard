@@ -5,8 +5,9 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CardView } from './CardView';
 import { ChainOverlay } from './ChainOverlay';
-import { ICard } from '@/submodule/suit/types';
-import { GameState, useGameStore } from '@/hooks/game';
+import type { ICard } from '@/submodule/suit/types';
+import type { GameState } from '@/hooks/game';
+import { useGameStore } from '@/hooks/game';
 import { LocalStorageHelper } from '@/service/local-storage';
 import master from '@/submodule/suit/catalog/catalog';
 import { isMitigated } from '@/helper/game';
@@ -19,6 +20,10 @@ interface Props {
 }
 
 const empty: ICard[] = [];
+
+function isICardArray(value: unknown): value is ICard[] {
+  return Array.isArray(value) && value.every(item => 'catalogId' in item && 'lv' in item);
+}
 
 export const HandView = ({ card, isSmall = false, source = 'hand' }: Props) => {
   const [isHighlighted, setHighlighted] = useState(false);
@@ -33,10 +38,15 @@ export const HandView = ({ card, isSmall = false, source = 'hand' }: Props) => {
   );
 
   const cp = useGameStore(cpSelector) ?? 0;
-  const trigger = (useGameStore(triggerSelector) ?? empty) as ICard[];
+  const rawTrigger = useGameStore(triggerSelector);
+  const trigger = isICardArray(rawTrigger) ? rawTrigger : empty;
   const { operable, activeCard } = useSystemContext();
   const isStrictOverride = useGameStore(state => state.rule.misc.strictOverride);
-  const cardMaster = useMemo(() => master.get(activeCard?.data.current?.type), [activeCard]);
+  const activeCardType: string | undefined = activeCard?.data.current?.type;
+  const cardMaster = useMemo(
+    () => (activeCardType ? master.get(activeCardType) : undefined),
+    [activeCardType]
+  );
   const isSameCard = useMemo(
     () =>
       isStrictOverride

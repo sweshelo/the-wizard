@@ -1,8 +1,9 @@
 import master from '@/submodule/suit/catalog/catalog';
 import { getColorCode } from '@/helper/color';
-import { IAtom, ICard } from '@/submodule/suit/types';
+import type { IAtom, ICard } from '@/submodule/suit/types';
 import { useSystemContext } from '@/hooks/system/hooks';
-import { useCallback, MouseEvent, useMemo } from 'react';
+import type { MouseEvent } from 'react';
+import { useCallback, useMemo } from 'react';
 import { getImageUrl } from '@/helper/image';
 import { useLongPress } from '@/hooks/use-long-press';
 
@@ -115,21 +116,20 @@ export const CardView = ({
   });
 
   const reduced = useMemo(() => {
-    return (
-      (card as ICard).delta
-        ?.map(delta => {
-          switch (delta.effect.type) {
-            case 'cost':
-              return delta.effect.value;
-            case 'dynamic-cost':
-              return delta.effect.diff;
-            default:
-              return 0;
-          }
-        })
-        .reduce((acc, current) => acc + current, 0) ?? 0
-    );
-  }, [card]);
+    if (!cardAsICard?.delta) return 0;
+    return cardAsICard.delta
+      .map(delta => {
+        switch (delta.effect.type) {
+          case 'cost':
+            return delta.effect.value;
+          case 'dynamic-cost':
+            return delta.effect.diff;
+          default:
+            return 0;
+        }
+      })
+      .reduce((acc, current) => acc + current, 0);
+  }, [cardAsICard]);
 
   return (
     <>
