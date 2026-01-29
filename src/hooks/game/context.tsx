@@ -1,7 +1,7 @@
 'use client';
 
 import { DEFAULT_ROOM_SETTINGS } from '@/constants/room';
-import { IPlayer, Rule } from '@/submodule/suit/types';
+import type { IPlayer, Rule } from '@/submodule/suit/types';
 import { create } from 'zustand';
 
 // ステートの型定義

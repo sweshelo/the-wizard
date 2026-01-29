@@ -1,5 +1,6 @@
 import { useContext } from 'react';
-import { SelectionMode, UnitSelectionContext } from './context';
+import type { SelectionMode } from './context';
+import { UnitSelectionContext } from './context';
 
 // Re-export the SelectionMode type for convenience
 export type { SelectionMode };

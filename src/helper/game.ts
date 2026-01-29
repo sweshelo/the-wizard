@@ -1,5 +1,5 @@
 import master from '@/submodule/suit/catalog/catalog';
-import { ICard } from '@/submodule/suit/types';
+import type { ICard } from '@/submodule/suit/types';
 
 export const isMitigated = (card: ICard, trigger: ICard[]) => {
   const target = master.get(card.catalogId);

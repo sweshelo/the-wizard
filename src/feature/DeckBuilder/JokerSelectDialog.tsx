@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import master from '@/submodule/suit/catalog/catalog';
-import { ICard } from '@/submodule/suit/types';
+import type { ICard } from '@/submodule/suit/types';
 import { CardView } from '@/component/ui/CardView';
 
 interface JokerSelectDialogProps {

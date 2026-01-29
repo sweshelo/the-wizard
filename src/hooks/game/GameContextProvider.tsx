@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { CardsDialogProvider } from '../cards-dialog';
 import { CardEffectDialogProvider } from '../card-effect-dialog';
 import { CardUsageEffectProvider } from '../card-usage-effect';

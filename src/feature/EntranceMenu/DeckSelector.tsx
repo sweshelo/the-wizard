@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LocalStorageHelper, DeckData } from '@/service/local-storage';
+import type { DeckData } from '@/service/local-storage';
+import { LocalStorageHelper } from '@/service/local-storage';
 import { DeckPreview } from '@/feature/DeckBuilder/DeckPreview';
-import { ICard } from '@/submodule/suit/types';
 import catalog from '@/submodule/suit/catalog/catalog';
 
 export const DeckSelector = () => {
@@ -35,11 +35,17 @@ export const DeckSelector = () => {
     }
   };
 
-  const convertToICards = (cards: string[]): ICard[] => {
+  const convertToPreviewCards = (cards: string[]) => {
     return cards.map((catalogId, index) => ({
-      id: `deck-${catalogId}-${index}`,
       catalogId,
-      lv: 1,
+      instanceId: `${catalogId}-${index}`,
+    }));
+  };
+
+  const convertToPreviewJokers = (jokers: string[]) => {
+    return jokers.map((id, index) => ({
+      id,
+      instanceId: `${id}-${index}`,
     }));
   };
 
@@ -57,7 +63,7 @@ export const DeckSelector = () => {
       .filter(Boolean); // nullを除外
 
     // 1. バージョン0チェック
-    const hasVersionZero = cardInfos.some(card => card!.info.version === 0);
+    const hasVersionZero = cardInfos.some(card => card?.info.version === 0);
     if (hasVersionZero) {
       return { text: '使用不可', color: 'text-gray-400' };
     }
@@ -198,8 +204,8 @@ export const DeckSelector = () => {
       {isPreviewOpen && mainDeck && (
         <DeckPreview
           deck={{
-            cards: convertToICards(mainDeck.cards),
-            joker: mainDeck.jokers ? convertToICards(mainDeck.jokers) : undefined,
+            cards: convertToPreviewCards(mainDeck.cards),
+            joker: mainDeck.jokers ? convertToPreviewJokers(mainDeck.jokers) : undefined,
           }}
           onClose={() => setIsPreviewOpen(false)}
         />

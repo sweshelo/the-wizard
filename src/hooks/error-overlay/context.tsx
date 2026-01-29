@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, ReactNode, useReducer, useMemo } from 'react';
+import type { ReactNode } from 'react';
+import { createContext, useReducer, useMemo } from 'react';
 
 type ErrorType = 'error' | 'warning' | 'info' | 'success';
 

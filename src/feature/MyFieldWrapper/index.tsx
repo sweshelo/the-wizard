@@ -1,4 +1,5 @@
-import { ReactNode, useMemo } from 'react';
+import type { ReactNode } from 'react';
+import { useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useSystemContext } from '@/hooks/system/hooks';
 import catalog from '@/submodule/suit/catalog/catalog';
@@ -14,8 +15,10 @@ export const MyFieldWrapper = ({ children }: MyFieldWrapperProps) => {
   const playerId = LocalStorageHelper.playerId();
   const field = useField(playerId)?.length ?? 0;
   const rule = useRule();
+  const activeCardType: string | undefined = activeCard?.data.current?.type;
   const disabled = useMemo(() => {
-    switch (catalog.get(activeCard?.data.current?.type)?.type) {
+    const catalogType = activeCardType ? catalog.get(activeCardType)?.type : undefined;
+    switch (catalogType) {
       case 'joker':
         return false;
       case 'unit':
@@ -23,7 +26,7 @@ export const MyFieldWrapper = ({ children }: MyFieldWrapperProps) => {
       default:
         return true;
     }
-  }, [activeCard, field, rule.player.max.field]);
+  }, [activeCardType, field, rule.player.max.field]);
 
   const { isOver, setNodeRef } = useDroppable({
     id: 'field',

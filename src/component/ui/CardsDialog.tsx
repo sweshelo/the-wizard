@@ -1,4 +1,4 @@
-import { ICard } from '@/submodule/suit/types';
+import type { ICard } from '@/submodule/suit/types';
 import { CardView } from './CardView';
 
 interface CardsDialogViewProps {

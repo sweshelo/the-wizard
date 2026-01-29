@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { LinkCard } from '@/component/ui/LinkCard';
 
 export const metadata: Metadata = {

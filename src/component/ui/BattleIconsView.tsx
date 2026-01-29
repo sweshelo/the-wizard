@@ -4,24 +4,30 @@ import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import { Tooltip } from 'react-tooltip';
 import keywordsData from '../../submodule/suit/catalog/keywords.json';
-import { IDelta } from '@/submodule/suit/types';
+import type { IDelta } from '@/submodule/suit/types';
 
 interface BattleIconsViewProps {
-  delta?: IDelta[]; // Use unknown instead of any for type safety
+  delta?: IDelta[];
+}
+
+function getKeywordName(effect: IDelta['effect']): string | null {
+  if (effect.type === 'keyword' && 'name' in effect) {
+    return effect.name;
+  }
+  return null;
 }
 
 const BattleIconsViewComponent = ({ delta }: BattleIconsViewProps) => {
-  // Safely handle delta as any type
   const deltaArray = Array.isArray(delta) ? delta : [];
   const [currentPage, setCurrentPage] = useState(0);
 
-  const keywordEffects: string[] =
-    Array.from(
-      new Set(
-        // @ts-expect-error keywordでフィルタしているので絶対にeffect.nameが存在する
-        deltaArray.filter(item => item.effect.type === 'keyword')?.map(item => item.effect.name)
-      )
-    ) || [];
+  const keywordEffects: string[] = Array.from(
+    new Set(
+      deltaArray
+        .map(item => getKeywordName(item.effect))
+        .filter((name): name is string => name !== null)
+    )
+  );
   const totalPages = Math.ceil(keywordEffects.length / 5);
 
   // Use useEffect to cycle through pages every second if there are more than 5 icons

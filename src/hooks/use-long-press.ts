@@ -1,4 +1,5 @@
-import { useRef, useCallback, TouchEvent } from 'react';
+import type { TouchEvent } from 'react';
+import { useRef, useCallback } from 'react';
 
 interface LongPressOptions {
   onLongPress: () => void;

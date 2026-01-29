@@ -1,6 +1,7 @@
 'use client';
 
-import { DeckData, LocalStorageHelper } from '@/service/local-storage';
+import type { DeckData } from '@/service/local-storage';
+import { LocalStorageHelper } from '@/service/local-storage';
 import { useState, useEffect } from 'react';
 
 // クリップボードAPI用
@@ -50,8 +51,8 @@ export const DeckSaveDialog = ({
   }, [isOpen]);
 
   const handleSave = () => {
-    const finalTitle = saveMode === 'new' ? title : selectedDeck!;
-    if (!finalTitle.trim()) {
+    const finalTitle = saveMode === 'new' ? title : selectedDeck;
+    if (!finalTitle || !finalTitle.trim()) {
       alert('デッキのタイトルを入力してください。');
       return;
     }
@@ -199,23 +200,37 @@ export const DeckSaveDialog = ({
                   setImportError('');
                   setImportSuccess('');
                   try {
-                    const obj = JSON.parse(importText);
-                    if (!obj.cards || !Array.isArray(obj.cards)) {
+                    const parsed: unknown = JSON.parse(importText);
+                    if (typeof parsed !== 'object' || parsed === null) {
+                      setImportError('無効なJSONです');
+                      return;
+                    }
+                    const obj = parsed as Record<string, unknown>;
+                    if (!('cards' in obj) || !Array.isArray(obj.cards)) {
                       setImportError('cards配列が見つかりません');
                       return;
                     }
-                    if (obj.cards.length !== 40) {
+                    const cards = obj.cards;
+                    if (!cards.every((item): item is string => typeof item === 'string')) {
+                      setImportError('cardsは文字列の配列である必要があります');
+                      return;
+                    }
+                    if (cards.length !== 40) {
                       setImportError('デッキは40枚である必要があります');
                       return;
                     }
 
                     // JOKER検証
-                    const importJokers = obj.jokers || [];
-                    if (!Array.isArray(importJokers)) {
+                    const rawJokers = 'jokers' in obj ? obj.jokers : [];
+                    if (!Array.isArray(rawJokers)) {
                       setImportError('jokersは配列である必要があります');
                       return;
                     }
-                    if (importJokers.length > 2) {
+                    if (!rawJokers.every((item): item is string => typeof item === 'string')) {
+                      setImportError('jokersは文字列の配列である必要があります');
+                      return;
+                    }
+                    if (rawJokers.length > 2) {
                       setImportError('JOKERは最大2枚までです');
                       return;
                     }
@@ -232,7 +247,7 @@ export const DeckSaveDialog = ({
                       return;
                     }
                     // 保存
-                    LocalStorageHelper.saveDeck(newTitle.trim(), obj.cards, importJokers, false);
+                    LocalStorageHelper.saveDeck(newTitle.trim(), cards, rawJokers, false);
                     setImportSuccess('デッキを作成しました');
                     setSavedDecks(LocalStorageHelper.getAllDecks());
                   } catch {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRef } from 'react';
 import { Tooltip } from 'react-tooltip';
-import { UseFormRegisterReturn } from 'react-hook-form';
+import type { UseFormRegisterReturn } from 'react-hook-form';
 
 interface NumberInputProps {
   label: string;
@@ -70,7 +70,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
           name={registration.name}
           onChange={e => {
             handleChange(e);
-            registration.onChange(e);
+            void registration.onChange(e);
           }}
           onBlur={registration.onBlur}
           ref={rangeRef}
@@ -85,7 +85,7 @@ export const NumberInput: React.FC<NumberInputProps> = ({
           name={registration.name}
           onChange={e => {
             handleChange(e);
-            registration.onChange(e);
+            void registration.onChange(e);
           }}
           onBlur={registration.onBlur}
           ref={e => {

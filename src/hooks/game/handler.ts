@@ -1,15 +1,17 @@
-import { ICard, IUnit, Message } from '@/submodule/suit/types';
+import type { ICard, IUnit, Message } from '@/submodule/suit/types';
 import { useCardEffectDialog } from '@/hooks/card-effect-dialog';
 import { useWebSocketGame } from './websocket';
 import { useCardsDialog } from '../cards-dialog';
 import { useInterceptUsage } from '../intercept-usage';
 import { useSoundV2 } from '../soundV2';
-import { SelectionMode, useUnitSelection } from '../unit-selection';
+import type { SelectionMode } from '../unit-selection';
+import { useUnitSelection } from '../unit-selection';
 import { useSystemContext } from '../system/hooks';
 import { useCardUsageEffect } from '../card-usage-effect';
 import { LocalStorageHelper } from '@/service/local-storage';
 import { useTimer as useGameTimer } from '@/feature/Timer/hooks';
-import { GameState, useGameStore } from './context';
+import type { GameState } from './context';
+import { useGameStore } from './context';
 import { useRule } from './hooks';
 import { useMulligan, useTimer as useMulliganTimer } from '../mulligan/context';
 
@@ -281,7 +283,7 @@ export const useHandler = () => {
                     ? 'right'
                     : 'left'
                   : 'center';
-              showCardUsageEffect({
+              void showCardUsageEffect({
                 image: body.image,
                 type: body.type,
                 position,
@@ -306,7 +308,7 @@ export const useHandler = () => {
         console.log('[Handler] TurnChange received');
         const isMyTurn = payload.player === LocalStorageHelper.playerId();
         play('turnchange');
-        showTurnChangeEffect({ turn: payload.isFirst ? 'first' : 'second' });
+        void showTurnChangeEffect({ turn: payload.isFirst ? 'first' : 'second' });
         // ルールの turnTime でリセット
         const turnTime = rule?.system?.turnTime ?? 60;
         resetWithDuration(turnTime);

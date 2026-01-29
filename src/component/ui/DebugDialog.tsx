@@ -312,10 +312,11 @@ export const DebugDialog = () => {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => {
-                          const unitId = (
-                            document.getElementById('animationUnitId') as HTMLInputElement
-                          ).value;
-                          if (unitId) setAnimationUnit(unitId);
+                          const element = document.getElementById('animationUnitId');
+                          if (element instanceof HTMLInputElement) {
+                            const unitId = element.value;
+                            if (unitId) setAnimationUnit(unitId);
+                          }
                         }}
                         className={`px-3 py-1 rounded ${defaultUIColors.border} bg-gray-600 hover:bg-gray-500 transition-colors`}
                       >
@@ -324,10 +325,11 @@ export const DebugDialog = () => {
 
                       <button
                         onClick={() => {
-                          const unitId = (
-                            document.getElementById('animationUnitId') as HTMLInputElement
-                          ).value;
-                          if (unitId) addTargetUnit(unitId);
+                          const element = document.getElementById('animationUnitId');
+                          if (element instanceof HTMLInputElement) {
+                            const unitId = element.value;
+                            if (unitId) addTargetUnit(unitId);
+                          }
                         }}
                         className={`px-3 py-1 rounded ${defaultUIColors.border} bg-blue-600 hover:bg-blue-500 transition-colors`}
                       >
@@ -336,9 +338,9 @@ export const DebugDialog = () => {
 
                       <button
                         onClick={() => {
-                          const unitId = (
-                            document.getElementById('animationUnitId') as HTMLInputElement
-                          ).value;
+                          const element = document.getElementById('animationUnitId');
+                          if (!(element instanceof HTMLInputElement)) return;
+                          const unitId = element.value;
                           if (!unitId) return;
 
                           // オーバークロックエフェクトを5秒間表示
@@ -356,16 +358,16 @@ export const DebugDialog = () => {
 
                       <button
                         onClick={() => {
-                          const unitId = (
-                            document.getElementById('animationUnitId') as HTMLInputElement
-                          ).value;
+                          const element = document.getElementById('animationUnitId');
+                          if (!(element instanceof HTMLInputElement)) return;
+                          const unitId = element.value;
                           if (!unitId) return;
 
                           // ランダムなステータス効果を生成
-                          const changes = [
-                            // { type: 'damage' as const, value: (-Math.floor(Math.random() * 10) - 1) * 1000 },
-                            // { type: 'bp' as const, value: Math.floor(Math.random() * 5) + 1 },
-                            { type: 'level' as const, value: 1 },
+                          const changes: { type: 'level'; value: number }[] = [
+                            // { type: 'damage', value: (-Math.floor(Math.random() * 10) - 1) * 1000 },
+                            // { type: 'bp', value: Math.floor(Math.random() * 5) + 1 },
+                            { type: 'level', value: 1 },
                           ];
 
                           // ステータス変更をコンテキストに追加
@@ -384,9 +386,9 @@ export const DebugDialog = () => {
                       <button
                         onClick={() => {
                           // 全てのエフェクトを同時に表示するテスト
-                          const unitId = (
-                            document.getElementById('animationUnitId') as HTMLInputElement
-                          ).value;
+                          const element = document.getElementById('animationUnitId');
+                          if (!(element instanceof HTMLInputElement)) return;
+                          const unitId = element.value;
                           if (!unitId) return;
 
                           // オーバークロックエフェクト
@@ -396,8 +398,8 @@ export const DebugDialog = () => {
                           addStatusChange({
                             unitId,
                             changes: [
-                              { type: 'damage' as const, value: -5 },
-                              { type: 'bp' as const, value: 3 },
+                              { type: 'damage', value: -5 },
+                              { type: 'bp', value: 3 },
                             ],
                           });
 

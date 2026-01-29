@@ -1,12 +1,19 @@
 import { ProgressConfirmButton } from '@/component/ui/ProgressConfirmButton';
 import { getImageUrl } from '@/helper/image';
 import master from '@/submodule/suit/catalog/catalog';
-import { ICard } from '@/submodule/suit/types';
+
+interface DeckPreviewCard {
+  catalogId: string;
+}
+
+interface DeckPreviewJoker {
+  id: string;
+}
 
 interface DeckPreviewProps {
   deck: {
-    cards: ICard[];
-    joker?: ICard[];
+    cards: DeckPreviewCard[];
+    joker?: DeckPreviewJoker[];
   };
   onClose: () => void;
 }

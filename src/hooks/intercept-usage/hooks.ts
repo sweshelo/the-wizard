@@ -1,8 +1,9 @@
 'use client';
 
-import { ICard } from '@/submodule/suit/types';
+import type { ICard } from '@/submodule/suit/types';
 import { useContext, useCallback } from 'react';
-import { InterceptUsageContext, InterceptUsageContextType } from './context';
+import type { InterceptUsageContextType } from './context';
+import { InterceptUsageContext } from './context';
 
 // Main hook to access the intercept usage context
 export const useInterceptUsage = (): InterceptUsageContextType => {

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useState, ReactNode, useCallback } from 'react';
+import type { ReactNode } from 'react';
+import React, { createContext, useState, useCallback } from 'react';
 
 // Animation phases for the attack sequence
 export type AttackAnimationPhase = 'idle' | 'declaration' | 'preparation' | 'launch' | 'return';

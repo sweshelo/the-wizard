@@ -1,8 +1,9 @@
 'use client';
 
 import { useContext } from 'react';
-import { CardsDialogContext, CardsDialogContextType } from './context';
-import { ICard } from '@/submodule/suit/types';
+import type { CardsDialogContextType } from './context';
+import { CardsDialogContext } from './context';
+import type { ICard } from '@/submodule/suit/types';
 import { useSoundV2 } from '../soundV2/hooks';
 import { useGameStore } from '@/hooks/game';
 

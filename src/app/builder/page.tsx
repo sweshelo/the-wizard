@@ -1,19 +1,23 @@
 import { DeckBuilder } from '@/feature/DeckBuilder';
 import { defaultUIColors } from '@/helper/color';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   title: 'Deck Builder',
 };
 
-async function getImplementedCardIds() {
+async function getImplementedCardIds(): Promise<string[]> {
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_SECURE_CONNECTION === 'true' ? 'https://' : 'http://'}${process.env.NEXT_PUBLIC_SERVER_HOST}/api/cards`
     );
     if (!res.ok) return [];
-    return await res.json();
+    const data: unknown = await res.json();
+    if (Array.isArray(data) && data.every((item): item is string => typeof item === 'string')) {
+      return data;
+    }
+    return [];
   } catch {
     return [];
   }

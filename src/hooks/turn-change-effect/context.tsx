@@ -1,14 +1,7 @@
 'use client';
 
-import {
-  createContext,
-  ReactNode,
-  useReducer,
-  useMemo,
-  useCallback,
-  useRef,
-  useEffect,
-} from 'react';
+import type { ReactNode } from 'react';
+import { createContext, useReducer, useMemo, useCallback, useRef, useEffect } from 'react';
 
 export type TurnType = 'first' | 'second';
 

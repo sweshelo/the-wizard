@@ -1,7 +1,8 @@
 'use client';
 
-import { IUnit } from '@/submodule/suit/types';
-import { createContext, Dispatch, SetStateAction, useCallback, useState } from 'react';
+import type { IUnit } from '@/submodule/suit/types';
+import type { Dispatch, SetStateAction } from 'react';
+import { createContext, useCallback, useState } from 'react';
 
 export type SelectionMode = 'select' | 'target' | 'block';
 

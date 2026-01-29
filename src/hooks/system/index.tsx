@@ -1,9 +1,10 @@
 'use client';
 
-import { ICard } from '@/submodule/suit/types';
-import { Active } from '@dnd-kit/core/dist/store';
+import type { ICard } from '@/submodule/suit/types';
+import type { Active } from '@dnd-kit/core/dist/store';
 
-import { createContext, ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
+import { createContext, useState } from 'react';
 
 export type SystemContextType = {
   selectedCard: ICard | undefined;

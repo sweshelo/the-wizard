@@ -1,7 +1,8 @@
-import React, { RefObject, useState, useEffect, useCallback } from 'react';
+import type { RefObject } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useWebSocketGame } from '@/hooks/game';
 import { useUnitSelection } from '@/hooks/unit-selection';
-import { IUnit } from '@/submodule/suit/types';
+import type { IUnit } from '@/submodule/suit/types';
 import { LocalStorageHelper } from '@/service/local-storage';
 import { useTimer } from '@/feature/Timer/hooks';
 

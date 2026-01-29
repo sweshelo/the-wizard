@@ -1,7 +1,8 @@
 'use client';
 
-import { ICard } from '@/submodule/suit/types';
-import { createContext, ReactNode, useState } from 'react';
+import type { ICard } from '@/submodule/suit/types';
+import type { ReactNode } from 'react';
+import { createContext, useState } from 'react';
 
 export type CardsDialogContextType = {
   cards: ICard[] | undefined;

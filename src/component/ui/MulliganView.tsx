@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useWebSocketGame } from '@/hooks/game/websocket';
 import { useSoundV2 } from '@/hooks/soundV2';
-import { Message, createMessage } from '@/submodule/suit/types';
+import type { Message } from '@/submodule/suit/types';
+import { createMessage } from '@/submodule/suit/types';
 import { LocalStorageHelper } from '@/service/local-storage';
 import { useMulligan, useTimer } from '@/hooks/mulligan/context';
 

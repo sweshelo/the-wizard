@@ -53,7 +53,18 @@ export const LocalStorageHelper = {
     const decksStr = window.localStorage.getItem('decks');
     if (decksStr) {
       try {
-        return JSON.parse(decksStr);
+        const parsed: unknown = JSON.parse(decksStr);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (item): item is DeckData =>
+              typeof item === 'object' &&
+              item !== null &&
+              'id' in item &&
+              'title' in item &&
+              'cards' in item
+          );
+        }
+        return [];
       } catch (e) {
         console.error('Error parsing decks from localStorage', e);
         return [];

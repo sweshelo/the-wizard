@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StatusChange, useStatusChange } from '@/hooks/status-change';
+import type { StatusChange } from '@/hooks/status-change';
+import { useStatusChange } from '@/hooks/status-change';
 
 export type StatusChangeType = 'damage' | 'level' | 'bp' | 'base-bp' | 'block';
 
@@ -92,21 +93,25 @@ export const StatusChangeEffect: React.FC<StatusChangeEffectProps> = ({
   }, [phase, effectPosition]);
 
   const DisplayContent = ({ type, value }: { type: string; value: number | string }) => {
+    // Convert value to number for comparison (handles both number and numeric string)
+    const numericValue = typeof value === 'number' ? value : Number(value);
+    const isPositive = !isNaN(numericValue) && numericValue > 0;
+
     // Determine label text based on type and value
     let labelText = '';
 
     switch (type) {
       case 'bp':
-        labelText = typeof value === 'number' && value > 0 ? 'BPアップ' : 'BPダウン';
+        labelText = isPositive ? 'BPアップ' : 'BPダウン';
         break;
       case 'base-bp':
-        labelText = typeof value === 'number' && value > 0 ? '基本BPアップ' : '基本BPダウン';
+        labelText = isPositive ? '基本BPアップ' : '基本BPダウン';
         break;
       case 'damage':
         labelText = 'BPダメージ';
         break;
       case 'level':
-        labelText = typeof value === 'number' && value > 0 ? 'クロックアップ' : 'クロックダウン';
+        labelText = isPositive ? 'クロックアップ' : 'クロックダウン';
         break;
       case 'block':
         labelText = 'BLOCK';
@@ -120,7 +125,7 @@ export const StatusChangeEffect: React.FC<StatusChangeEffectProps> = ({
     const labelShadowColor =
       type === 'block'
         ? 'rgba(59, 130, 246, 0.9)' // blue-500 for block
-        : typeof value === 'number' && value > 0
+        : isPositive
           ? 'rgba(6, 182, 212, 0.9)' // cyan-500 for positive
           : 'rgba(239, 68, 68, 0.9)'; // red-500 for negative
     // Value shadow is always red
@@ -169,7 +174,7 @@ export const StatusChangeEffect: React.FC<StatusChangeEffectProps> = ({
           transition: 'all 0.3s ease-out',
         }}
       >
-        <DisplayContent type={type} value={value as number} />
+        <DisplayContent type={type} value={value} />
       </div>
     </div>
   );

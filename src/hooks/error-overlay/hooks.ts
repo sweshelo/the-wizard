@@ -1,5 +1,6 @@
 import { useContext } from 'react';
-import { ErrorOverlayContext, ErrorOverlayContextType } from './context';
+import type { ErrorOverlayContextType } from './context';
+import { ErrorOverlayContext } from './context';
 
 export const useErrorOverlay = (): ErrorOverlayContextType => {
   const context = useContext(ErrorOverlayContext);

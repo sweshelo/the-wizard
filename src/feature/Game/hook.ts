@@ -2,7 +2,7 @@ import { STARTER_DECK } from '@/constants/deck';
 import { useHandler } from '@/hooks/game/handler';
 import { useWebSocket } from '@/hooks/websocket/hooks';
 import { LocalStorageHelper } from '@/service/local-storage';
-import { Message, PlayerEntryPayload } from '@/submodule/suit/types';
+import type { Message, PlayerEntryPayload } from '@/submodule/suit/types';
 import { useEffect, useRef, useState } from 'react';
 
 interface Props {
@@ -20,7 +20,7 @@ export const useGameComponentHook = ({ id }: Props) => {
       isJoined.current = true;
       const deck = LocalStorageHelper.getMainDeck();
       websocket?.on('message', (message: Message) => {
-        handle(message);
+        void handle(message);
       });
       websocket.send({
         action: {

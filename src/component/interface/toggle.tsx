@@ -1,6 +1,6 @@
 'use client';
 
-import { UseFormRegisterReturn } from 'react-hook-form';
+import type { UseFormRegisterReturn } from 'react-hook-form';
 import { useState } from 'react';
 
 interface ToggleProps {
@@ -32,7 +32,7 @@ export const Toggle: React.FC<ToggleProps> = ({
       setIsChecked(e.target.checked);
       // 元のonChangeも呼び出す
       if (originalOnChange) {
-        originalOnChange(e);
+        void originalOnChange(e);
       }
     },
   };

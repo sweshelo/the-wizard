@@ -1,6 +1,7 @@
-"use client";
+'use client';
 
-import { createContext, ReactNode, useReducer, useMemo } from "react";
+import type { ReactNode } from 'react';
+import { createContext, useReducer, useMemo } from 'react';
 
 // Define the state interface for the card effect dialog
 export interface CardEffectDialogState {
@@ -11,8 +12,8 @@ export interface CardEffectDialogState {
 
 // Define the action types for the reducer
 export type CardEffectDialogAction =
-  | { type: "SHOW_DIALOG"; title: string; message: string }
-  | { type: "HIDE_DIALOG" };
+  | { type: 'SHOW_DIALOG'; title: string; message: string }
+  | { type: 'HIDE_DIALOG' };
 
 // Define the context type
 export type CardEffectDialogContextType = {
@@ -22,31 +23,31 @@ export type CardEffectDialogContextType = {
 };
 
 // Create the context
-export const CardEffectDialogContext = createContext<
-  CardEffectDialogContextType | undefined
->(undefined);
+export const CardEffectDialogContext = createContext<CardEffectDialogContextType | undefined>(
+  undefined
+);
 
 // Initial state
 const initialState: CardEffectDialogState = {
   isVisible: false,
-  title: "",
-  message: "",
+  title: '',
+  message: '',
 };
 
 // Reducer function
 function cardEffectDialogReducer(
   state: CardEffectDialogState,
-  action: CardEffectDialogAction,
+  action: CardEffectDialogAction
 ): CardEffectDialogState {
   switch (action.type) {
-    case "SHOW_DIALOG":
+    case 'SHOW_DIALOG':
       return {
         ...state,
         isVisible: true,
         title: action.title,
         message: action.message,
       };
-    case "HIDE_DIALOG":
+    case 'HIDE_DIALOG':
       return {
         ...state,
         isVisible: false,
@@ -57,34 +58,27 @@ function cardEffectDialogReducer(
 }
 
 // Provider component
-export const CardEffectDialogProvider = ({
-  children,
-}: {
-  children: ReactNode;
-}) => {
+export const CardEffectDialogProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cardEffectDialogReducer, initialState);
 
   // Action creators
   const showDialog = (title: string, message: string): Promise<void> => {
-    dispatch({ type: "SHOW_DIALOG", title, message });
+    dispatch({ type: 'SHOW_DIALOG', title, message });
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       setTimeout(() => {
-        dispatch({ type: "HIDE_DIALOG" });
+        dispatch({ type: 'HIDE_DIALOG' });
         resolve();
       }, 2500);
     });
   };
 
   const hideDialog = () => {
-    dispatch({ type: "HIDE_DIALOG" });
+    dispatch({ type: 'HIDE_DIALOG' });
   };
 
   // Memoized context value
-  const contextValue = useMemo(
-    () => ({ state, showDialog, hideDialog }),
-    [state],
-  );
+  const contextValue = useMemo(() => ({ state, showDialog, hideDialog }), [state]);
 
   return (
     <CardEffectDialogContext.Provider value={contextValue}>
