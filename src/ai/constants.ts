@@ -16,12 +16,12 @@ export const AI_CONFIG = {
  * Claude モデルID
  */
 export const MODEL_CONFIG = {
-  /** Claude 3 Haiku - 高速・低コスト */
-  HAIKU: 'claude-3-haiku-20240307',
-  /** Claude 3.5 Sonnet - バランス型 */
-  SONNET: 'claude-3-5-sonnet-20241022',
-  /** Claude 3 Opus - 高精度 */
-  OPUS: 'claude-3-opus-20240229',
+  /** Claude 3.5 Haiku - 高速・低コスト */
+  HAIKU: 'claude-3-5-haiku-20241022',
+  /** Claude 4 Sonnet - バランス型 */
+  SONNET: 'claude-sonnet-4-20250514',
+  /** Claude 4.5 Opus - 高精度 */
+  OPUS: 'claude-opus-4-5-20251101',
 } as const;
 
 /**
@@ -39,19 +39,19 @@ export const TIMEOUT_CONFIG = {
 } as const;
 
 /**
- * モデル別のコスト（1Kトークンあたりのドル）
+ * モデル別のコスト（1Mトークンあたりのドル）
  */
 export const MODEL_COST = {
   haiku: {
-    input: 0.00025,
-    output: 0.00125,
+    input: 0.8,
+    output: 4.0,
   },
   sonnet: {
-    input: 0.003,
-    output: 0.015,
+    input: 3.0,
+    output: 15.0,
   },
   opus: {
-    input: 0.015,
-    output: 0.075,
+    input: 15.0,
+    output: 75.0,
   },
 } as const;

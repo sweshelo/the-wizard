@@ -8,9 +8,9 @@ GlobalRegistrator.register();
 // Next.js navigation のモック
 mock.module('next/navigation', () => ({
   useRouter: () => ({
-    push: mock(() => {}),
-    replace: mock(() => {}),
-    prefetch: mock(() => {}),
+    push: mock(() => Promise.resolve(true)),
+    replace: mock(() => Promise.resolve(true)),
+    prefetch: mock(() => Promise.resolve()),
   }),
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => '/',

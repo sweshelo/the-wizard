@@ -62,7 +62,9 @@ export const createMockWebSocketService = (): MockWebSocketService => {
     emit: mock((event: string, data: unknown) => {
       const handlers = listeners.get(event);
       if (handlers) {
-        handlers.forEach(handler => handler(data));
+        handlers.forEach(handler => {
+          handler(data);
+        });
       }
     }),
 
@@ -72,7 +74,9 @@ export const createMockWebSocketService = (): MockWebSocketService => {
     _triggerMessage: (message: MockMessage) => {
       const handlers = listeners.get('message');
       if (handlers) {
-        handlers.forEach(handler => handler(message));
+        handlers.forEach(handler => {
+          handler(message);
+        });
       }
     },
   };

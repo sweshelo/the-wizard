@@ -76,8 +76,15 @@ describe('AI Types', () => {
     expect(resources.jokerGauge).toBe(50);
   });
 
-  it('should support all card types', () => {
-    const types: CompactCard['type'][] = ['unit', 'trigger', 'intercept', 'advanced_unit', 'virus'];
+  it('should support all card types including joker', () => {
+    const types: CompactCard['type'][] = [
+      'unit',
+      'trigger',
+      'intercept',
+      'advanced_unit',
+      'virus',
+      'joker',
+    ];
     types.forEach(type => {
       const card: CompactCard = {
         id: 'c1',
