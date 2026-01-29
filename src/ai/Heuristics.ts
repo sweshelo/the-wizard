@@ -126,8 +126,10 @@ export class Heuristics {
       };
     }
 
-    // 相打ち以上が取れるユニットを探す
-    const viableBlockers = availableBlockers.filter(unit => unit.bp >= attackerBP);
+    // 相打ち以上、または許容BP差以内で相討ちが取れるユニットを探す
+    const viableBlockers = availableBlockers.filter(
+      unit => attackerBP - unit.bp <= this.config.blockBPThreshold
+    );
 
     if (viableBlockers.length > 0) {
       // 最もBPが低い（無駄が少ない）ユニットでブロック

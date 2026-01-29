@@ -67,7 +67,9 @@ function AIChatMinimized() {
 
   return (
     <button
+      type="button"
       onClick={toggleVisibility}
+      aria-label="AIチャットを開く"
       className="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-lg z-50 flex items-center gap-2"
     >
       <span>AI Chat</span>

@@ -161,15 +161,16 @@ export class AIController {
       return false; // Operation自体は通常処理も必要
     }
 
-    // freeze中はイベントをバッファに蓄積
-    if (this.state.isFrozen && this.isGameEvent(payload as unknown as Record<string, unknown>)) {
-      // イベントは蓄積するが、通常処理にも委譲
-      return false;
-    }
-
     // AIが処理すべきメッセージかチェック
     const aiEvent = this.extractAIEvent(payload as unknown as Record<string, unknown>);
     if (!aiEvent) {
+      return false;
+    }
+
+    // freeze中はイベントをバッファに蓄積
+    if (this.state.isFrozen) {
+      this.state.pendingEvents.push(aiEvent);
+      // イベントは蓄積するが、通常処理にも委譲
       return false;
     }
 
@@ -194,8 +195,8 @@ export class AIController {
       this.state.isFrozen = true;
     } else if (action === 'defrost') {
       this.state.isFrozen = false;
-      // バッファされたイベントをフラッシュ
-      this.flushPendingEvents();
+      // バッファされたイベントをフラッシュ（非同期で処理）
+      void this.flushPendingEvents();
     }
   }
 
@@ -280,24 +281,35 @@ export class AIController {
       return;
     }
 
+    // 一意のタイムアウトキーを生成（同一タイプの複数イベントに対応）
+    const timeoutKey = this.generateTimeoutKey(event);
+
     // タイムアウトを設定
     const timeoutMs = this.getTimeoutForEvent(event);
-    const timeoutPromise = this.createTimeout(event.type, timeoutMs);
+    const timeoutPromise = this.createTimeout(timeoutKey, timeoutMs);
 
     try {
       // 決定ハンドラーを呼び出し（タイムアウト付き）
       const response = await Promise.race([this.decisionHandler(event), timeoutPromise]);
 
       // タイムアウトをクリア
-      this.clearTimeout(event.type);
+      this.clearTimeout(timeoutKey);
 
       // レスポンスを処理（実際のWebSocket送信は上位層で行う）
       console.log('[AIController] Decision made:', response);
     } catch (error) {
       console.error('[AIController] Decision error:', error);
       // タイムアウトをクリア
-      this.clearTimeout(event.type);
+      this.clearTimeout(timeoutKey);
     }
+  }
+
+  /**
+   * イベントからユニークなタイムアウトキーを生成
+   */
+  private generateTimeoutKey(event: AIEvent): string {
+    const uniqueId = event.promptId ?? Date.now().toString();
+    return `${event.type}:${uniqueId}`;
   }
 
   /**
@@ -321,23 +333,23 @@ export class AIController {
   /**
    * タイムアウトPromiseを作成
    */
-  private createTimeout(eventType: string, timeoutMs: number): Promise<never> {
+  private createTimeout(timeoutKey: string, timeoutMs: number): Promise<never> {
     return new Promise((_, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new Error(`AI decision timeout for ${eventType}`));
+        reject(new Error(`AI decision timeout for ${timeoutKey}`));
       }, timeoutMs);
-      this.timeoutIds.set(eventType, timeoutId);
+      this.timeoutIds.set(timeoutKey, timeoutId);
     });
   }
 
   /**
    * タイムアウトをクリア
    */
-  private clearTimeout(eventType: string): void {
-    const timeoutId = this.timeoutIds.get(eventType);
+  private clearTimeout(timeoutKey: string): void {
+    const timeoutId = this.timeoutIds.get(timeoutKey);
     if (timeoutId) {
       clearTimeout(timeoutId);
-      this.timeoutIds.delete(eventType);
+      this.timeoutIds.delete(timeoutKey);
     }
   }
 
@@ -352,13 +364,17 @@ export class AIController {
   }
 
   /**
-   * バッファされたイベントをフラッシュ
+   * バッファされたイベントをフラッシュして順次処理
    */
-  private flushPendingEvents(): void {
+  private async flushPendingEvents(): Promise<void> {
     const events = [...this.state.pendingEvents];
     this.state.pendingEvents = [];
-    // 蓄積されたイベントを処理（必要に応じて）
     console.log('[AIController] Flushing', events.length, 'pending events');
+
+    // バッファされたイベントを順次処理
+    for (const event of events) {
+      await this.processAIEvent(event);
+    }
   }
 
   /**

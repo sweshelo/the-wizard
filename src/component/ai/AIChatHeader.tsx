@@ -34,33 +34,41 @@ export function AIChatHeader() {
       <div className="flex items-center gap-2">
         {/* 詳細表示切り替え */}
         <button
+          type="button"
           onClick={handleDetailToggle}
           className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700"
           title={settings.detailLevel === 'full' ? '要約表示に切り替え' : '詳細表示に切り替え'}
+          aria-label={settings.detailLevel === 'full' ? '要約表示に切り替え' : '詳細表示に切り替え'}
         >
           {settings.detailLevel === 'full' ? '要約' : '詳細'}
         </button>
         {/* 高さ変更 */}
         <button
+          type="button"
           onClick={handleHeightChange}
           className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700"
           title="表示サイズを変更"
+          aria-label="表示サイズを変更"
         >
           <HeightIcon />
         </button>
         {/* クリア */}
         <button
+          type="button"
           onClick={clearMessages}
           className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700"
           title="ログをクリア"
+          aria-label="ログをクリア"
         >
           <ClearIcon />
         </button>
         {/* 最小化 */}
         <button
+          type="button"
           onClick={toggleVisibility}
           className="text-gray-400 hover:text-white text-sm px-2 py-1 rounded hover:bg-gray-700"
           title="最小化"
+          aria-label="最小化"
         >
           <MinimizeIcon />
         </button>

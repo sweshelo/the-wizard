@@ -129,9 +129,11 @@ function MessageInteraction({ message }: { message: AIChatMessageType }) {
     <div className="mt-2 flex gap-2 flex-wrap">
       {interaction.options?.map(option => (
         <button
+          type="button"
           key={option.id}
           className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded"
           title={option.description}
+          aria-label={option.description ?? option.label}
         >
           {option.label}
         </button>
