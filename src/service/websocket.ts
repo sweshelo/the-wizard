@@ -29,7 +29,14 @@ class WebSocketService extends EventEmitter {
     });
 
     this.socket.addEventListener('message', (event: MessageEvent<string>) => {
-      const parsed: unknown = JSON.parse(event.data);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(event.data);
+      } catch (e) {
+        console.error('Failed to parse WebSocket message:', e);
+        return;
+      }
+
       if (typeof parsed !== 'object' || parsed === null) {
         console.error('Invalid message format');
         return;

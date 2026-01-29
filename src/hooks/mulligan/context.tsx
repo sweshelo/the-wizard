@@ -24,11 +24,17 @@ export const MulliganProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Global timer that runs continuously in the background
   useEffect(() => {
-    const startTime = timerStart.current;
-    if (startTime === null || !timerRunning) return;
+    if (!timerRunning) return;
 
     const intervalId = setInterval(() => {
-      const elapsedSeconds = (Date.now() - startTime) / 1000;
+      // Read current values on each tick to avoid stale closures
+      const currentStartTime = timerStart.current;
+      if (currentStartTime === null) {
+        clearInterval(intervalId);
+        return;
+      }
+
+      const elapsedSeconds = (Date.now() - currentStartTime) / 1000;
       const newTimeLeft = Math.max(initialTime.current - elapsedSeconds, 0);
 
       setTimeLeft(parseFloat(newTimeLeft.toFixed(2)));

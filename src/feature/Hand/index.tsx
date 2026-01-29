@@ -2,11 +2,7 @@ import { HandView } from '@/component/ui/HandView';
 import { MulliganView } from '@/component/ui/MulliganView';
 import { useRule, useHand } from '@/hooks/game/hooks';
 import { useMemo } from 'react';
-import type { ICard, IAtom } from '@/submodule/suit/types';
-
-function isICard(atom: IAtom): atom is ICard {
-  return 'catalogId' in atom && 'lv' in atom;
-}
+import { isICard } from '@/helper/card';
 
 interface HandAreaProps {
   playerId: string;

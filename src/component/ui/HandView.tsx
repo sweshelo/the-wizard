@@ -11,6 +11,7 @@ import { useGameStore } from '@/hooks/game';
 import { LocalStorageHelper } from '@/service/local-storage';
 import master from '@/submodule/suit/catalog/catalog';
 import { isMitigated } from '@/helper/game';
+import { isICardArray } from '@/helper/card';
 
 interface Props {
   card: ICard;
@@ -20,10 +21,6 @@ interface Props {
 }
 
 const empty: ICard[] = [];
-
-function isICardArray(value: unknown): value is ICard[] {
-  return Array.isArray(value) && value.every(item => 'catalogId' in item && 'lv' in item);
-}
 
 export const HandView = ({ card, isSmall = false, source = 'hand' }: Props) => {
   const [isHighlighted, setHighlighted] = useState(false);

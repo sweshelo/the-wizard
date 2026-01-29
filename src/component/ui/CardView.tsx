@@ -6,6 +6,7 @@ import type { MouseEvent } from 'react';
 import { useCallback, useMemo } from 'react';
 import { getImageUrl } from '@/helper/image';
 import { useLongPress } from '@/hooks/use-long-press';
+import { isICard } from '@/helper/card';
 
 interface Props {
   card: IAtom;
@@ -15,16 +16,6 @@ interface Props {
   isMitigated?: boolean;
   isSmall?: boolean;
   isTiny?: boolean;
-}
-
-// Type guard to check if an IAtom is actually an ICard
-function isICard(card: IAtom): card is ICard {
-  return (
-    'catalogId' in card &&
-    typeof card.catalogId === 'string' &&
-    'lv' in card &&
-    typeof card.lv === 'number'
-  );
 }
 
 interface Intercept extends ICard {

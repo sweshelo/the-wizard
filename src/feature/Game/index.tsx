@@ -29,7 +29,6 @@ import { useCardsDialog } from '@/hooks/cards-dialog';
 import { useSystemContext } from '@/hooks/system/hooks';
 import { Field } from '../Field';
 import { MyFieldWrapper } from '../MyFieldWrapper';
-import type { IAtom, ICard } from '@/submodule/suit/types';
 import { Timer } from '../Timer';
 import { LocalStorageHelper } from '@/service/local-storage';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
@@ -44,10 +43,7 @@ import { LoadingOverlay } from '@/component/ui/LoadingOverlay';
 import { ErrorOverlay } from '@/component/ui/ErrorOverlay';
 import { useErrorOverlay } from '@/hooks/error-overlay';
 import { TurnChangeEffect } from '@/component/ui/TurnChangeEffect';
-
-function isICard(atom: IAtom): atom is ICard {
-  return 'catalogId' in atom && 'lv' in atom;
-}
+import { isICard } from '@/helper/card';
 
 interface RoomProps {
   id: string;

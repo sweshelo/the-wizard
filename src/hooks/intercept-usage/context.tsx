@@ -77,6 +77,10 @@ export const InterceptUsageProvider = ({ children }: { children: ReactNode }) =>
         }
 
         timeoutRef.current = setTimeout(() => {
+          // Call the cancel callback on timeout
+          if (onCancelRef.current) {
+            onCancelRef.current();
+          }
           clearAvailableIntercepts();
           setInterceptTimeLimit(null);
         }, timeLimit * 1000);

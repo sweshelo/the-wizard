@@ -10,14 +10,10 @@ import { useMyArea } from './hooks';
 import { useCallback, useMemo } from 'react';
 import { MyTrash } from '../MyTrash';
 import { LocalStorageHelper } from '@/service/local-storage';
-import type { IAtom, ICard } from '@/submodule/suit/types';
 import { useDeck, usePlayer } from '@/hooks/game/hooks';
 import { PurpleGaugeView } from '@/component/ui/purpleGaugeView';
 import { JokerArea } from '../JokerArea';
-
-function isICard(atom: IAtom): atom is ICard {
-  return 'catalogId' in atom && 'lv' in atom;
-}
+import { isICard } from '@/helper/card';
 
 export const MyArea = () => {
   const { openCardsDialog } = useCardsDialog();

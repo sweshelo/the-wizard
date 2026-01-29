@@ -1,15 +1,11 @@
 import { useWebSocketGame } from '@/hooks/game';
 import { useSystemContext } from '@/hooks/system/hooks';
 import { useHand, useField } from '@/hooks/game/hooks';
-import type { ICard, IAtom } from '@/submodule/suit/types';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { useDndMonitor } from '@dnd-kit/core';
 import { LocalStorageHelper } from '@/service/local-storage';
 import catalog from '@/submodule/suit/catalog/catalog';
-
-function isICard(atom: IAtom): atom is ICard {
-  return 'catalogId' in atom && 'lv' in atom;
-}
+import { isICard } from '@/helper/card';
 
 export const useMyArea = () => {
   const { activeCard, setActiveCard } = useSystemContext();

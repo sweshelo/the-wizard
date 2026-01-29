@@ -36,14 +36,16 @@ export const DeckSelector = () => {
   };
 
   const convertToPreviewCards = (cards: string[]) => {
-    return cards.map(catalogId => ({
+    return cards.map((catalogId, index) => ({
       catalogId,
+      instanceId: `${catalogId}-${index}`,
     }));
   };
 
   const convertToPreviewJokers = (jokers: string[]) => {
-    return jokers.map(id => ({
+    return jokers.map((id, index) => ({
       id,
+      instanceId: `${id}-${index}`,
     }));
   };
 
