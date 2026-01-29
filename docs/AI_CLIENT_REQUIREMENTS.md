@@ -1,9 +1,9 @@
 # CODE OF JOKER AI Client 要件定義書
 
-**バージョン:** 1.5
+**バージョン:** 1.6
 **作成日:** 2026-01-29
 **更新日:** 2026-01-29
-**ステータス:** ドラフト (自動学習・シナジー検出追加)
+**ステータス:** ドラフト (重み付き再帰取得追加)
 
 ---
 
@@ -1043,22 +1043,30 @@ interface KnowledgeStore {
     byDeckArchetype: Map<string, string[]>;
   };
 
+  // 重要度インデックス（被参照関係）
+  importanceIndex: ImportanceIndex;
+
   // 操作
   add(entry: KnowledgeEntry): void;
   update(id: string, updates: Partial<KnowledgeEntry>): void;
   search(query: KnowledgeQuery): KnowledgeEntry[];
   getRelevant(gameState: AIGameContext): KnowledgeEntry[];
   prune(): void;  // 古い/低信頼度のエントリを削除
+  rebuildIndices(): void;  // インデックス再構築
 
   // 自動学習
   learnFromEvents(events: GameEventEntry[]): KnowledgeEntry[];
   learnFromGameResult(game: GameHistory): KnowledgeEntry[];
 
-  // カード関連知識取得
-  getByCard(cardId: string): KnowledgeEntry[];
-  getByCards(cardIds: string[]): KnowledgeEntry[];
-  getByColor(color: CardColor): KnowledgeEntry[];
-  getSynergies(cardId: string): KnowledgeEntry[];
+  // カード関連知識取得（重み付き）
+  getByCard(cardId: string): WeightedKnowledgeEntry[];
+  getByCards(cardIds: string[]): WeightedKnowledgeEntry[];
+  getByColor(color: CardColor): WeightedKnowledgeEntry[];
+  getSynergies(cardId: string): WeightedKnowledgeEntry[];
+
+  // 重要カード/知識の特定
+  getImportantCards(limit?: number): Array<{ cardId: string; weight: number }>;
+  getImportantKnowledge(limit?: number): WeightedKnowledgeEntry[];
 }
 
 // 検索クエリ
@@ -1164,67 +1172,206 @@ interface EstimateOpponentDeckResult {
 }
 ```
 
-##### 3.6.4.5 循環参照防止
+##### 3.6.4.5 重み付き再帰取得と重要度スコアリング
+
+多くのカード・知識から参照されているエントリは重要である可能性が高い。
+再帰取得を行い、被参照回数を重みとして優先度付けする。
 
 ```typescript
-// 循環参照防止戦略
-interface CircularReferencePrevention {
-  // 1. 深度制限: 関連知識の再帰取得は1階層まで
-  maxDepth: 1;
-
-  // 2. 取得済みID追跡
-  fetchedIds: Set<string>;
-
-  // 3. リクエストごとにリセット
-  resetPerRequest: true;
+// 重み付き知識エントリ
+interface WeightedKnowledgeEntry extends KnowledgeEntry {
+  weight: number;           // 重要度スコア
+  referenceCount: number;   // 被参照回数
+  depth: number;            // 取得時の深度
 }
 
-// 安全な知識取得
-function getKnowledgeWithRelated(
-  id: string,
+// 重要度インデックス（事前計算）
+interface ImportanceIndex {
+  // 被参照回数マップ: knowledgeId -> 参照しているknowledgeIdの配列
+  referencedBy: Map<string, string[]>;
+
+  // カードごとの関連知識数
+  cardKnowledgeCount: Map<string, number>;
+
+  // 再計算
+  rebuild(store: KnowledgeStore): void;
+}
+
+// 重要度インデックスの構築
+function buildImportanceIndex(store: KnowledgeStore): ImportanceIndex {
+  const referencedBy = new Map<string, string[]>();
+  const cardKnowledgeCount = new Map<string, number>();
+
+  // 全エントリをスキャンして被参照関係を構築
+  for (const entry of store.entries) {
+    // 関連知識への参照をカウント
+    for (const relId of entry.relatedKnowledgeIds || []) {
+      const refs = referencedBy.get(relId) || [];
+      refs.push(entry.id);
+      referencedBy.set(relId, refs);
+    }
+
+    // カードごとの知識数をカウント
+    for (const cardId of entry.tags.cards || []) {
+      const count = cardKnowledgeCount.get(cardId) || 0;
+      cardKnowledgeCount.set(cardId, count + 1);
+    }
+  }
+
+  return {
+    referencedBy,
+    cardKnowledgeCount,
+    rebuild: (s) => Object.assign(this, buildImportanceIndex(s))
+  };
+}
+
+// 重み計算
+function calculateWeight(
+  entry: KnowledgeEntry,
+  index: ImportanceIndex,
+  depth: number
+): number {
+  const referenceCount = index.referencedBy.get(entry.id)?.length || 0;
+
+  // 重みの要素:
+  // 1. 被参照回数（多いほど重要）
+  // 2. 信頼度
+  // 3. 使用回数
+  // 4. 深度減衰（深いほど重要度低下）
+  const depthDecay = Math.pow(0.7, depth);  // 深度1で0.7, 深度2で0.49...
+
+  const weight =
+    (referenceCount * 2.0) +           // 被参照回数は大きな重み
+    (entry.confidence * 1.0) +          // 信頼度
+    (Math.log10(entry.usageCount + 1) * 0.5) +  // 使用回数（対数）
+    depthDecay;
+
+  return weight;
+}
+
+// 再帰的な知識取得（重み付き）
+function getKnowledgeRecursive(
+  entryIds: string[],
   store: KnowledgeStore,
-  visited: Set<string> = new Set()
-): KnowledgeEntry & { related: KnowledgeEntry[] } {
-  // 循環参照チェック
-  if (visited.has(id)) {
-    throw new Error(`Circular reference detected: ${id}`);
+  index: ImportanceIndex,
+  options: {
+    maxDepth?: number;      // 最大再帰深度 (default: 3)
+    maxResults?: number;    // 最大結果数 (default: 20)
+  } = {}
+): WeightedKnowledgeEntry[] {
+  const { maxDepth = 3, maxResults = 20 } = options;
+
+  const visited = new Set<string>();
+  const results: WeightedKnowledgeEntry[] = [];
+
+  function traverse(ids: string[], depth: number): void {
+    if (depth > maxDepth) return;
+
+    for (const id of ids) {
+      // 循環参照防止: 訪問済みはスキップ
+      if (visited.has(id)) continue;
+      visited.add(id);
+
+      const entry = store.entries.find(e => e.id === id);
+      if (!entry) continue;
+
+      // 重み計算
+      const weight = calculateWeight(entry, index, depth);
+      const referenceCount = index.referencedBy.get(id)?.length || 0;
+
+      results.push({
+        ...entry,
+        weight,
+        referenceCount,
+        depth
+      });
+
+      // 関連知識を再帰取得
+      if (entry.relatedKnowledgeIds && entry.relatedKnowledgeIds.length > 0) {
+        traverse(entry.relatedKnowledgeIds, depth + 1);
+      }
+    }
   }
-  visited.add(id);
 
-  const entry = store.entries.find(e => e.id === id);
-  if (!entry) throw new Error(`Knowledge not found: ${id}`);
+  // 起点から再帰開始
+  traverse(entryIds, 0);
 
-  // 関連知識は1階層のみ（再帰しない）
-  const related = (entry.relatedKnowledgeIds || [])
-    .filter(relId => !visited.has(relId))
-    .map(relId => store.entries.find(e => e.id === relId))
-    .filter((e): e is KnowledgeEntry => e !== undefined);
-
-  return { ...entry, related };
+  // 重みでソートして上位を返却
+  return results
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, maxResults);
 }
 
-// ツール呼び出し時の循環参照防止
-function handleToolCall(
-  tool: string,
-  params: Record<string, unknown>,
-  context: { excludeIds: string[] }
-): unknown {
-  // 前回の呼び出しで返却した知識IDを除外
-  const excludeIds = new Set([
-    ...(params.excludeKnowledgeIds as string[] || []),
-    ...context.excludeIds
-  ]);
+// カード検索時の知識取得（重み付き）
+function getKnowledgeForCards(
+  cardIds: string[],
+  store: KnowledgeStore,
+  index: ImportanceIndex
+): WeightedKnowledgeEntry[] {
+  // カードに直接関連する知識IDを収集
+  const directKnowledgeIds: string[] = [];
 
-  // 結果に含まれる知識IDを記録
-  const result = executeToolWithExclusion(tool, params, excludeIds);
-
-  // コンテキストに追加（次回呼び出しで除外）
-  if (result.returnedKnowledgeIds) {
-    context.excludeIds.push(...result.returnedKnowledgeIds);
+  for (const cardId of cardIds) {
+    const knowledgeIds = store.indices.byCard.get(cardId) || [];
+    directKnowledgeIds.push(...knowledgeIds);
   }
 
-  return result;
+  // 重複除去
+  const uniqueIds = [...new Set(directKnowledgeIds)];
+
+  // 再帰取得（関連知識も含む）
+  return getKnowledgeRecursive(uniqueIds, store, index, {
+    maxDepth: 2,
+    maxResults: 15
+  });
 }
+
+// 重要カード特定
+function findImportantCards(
+  index: ImportanceIndex,
+  limit: number = 10
+): Array<{ cardId: string; knowledgeCount: number }> {
+  return Array.from(index.cardKnowledgeCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([cardId, count]) => ({ cardId, knowledgeCount: count }));
+}
+```
+
+**重み付けの考え方:**
+
+| 要素 | 重み | 理由 |
+|------|------|------|
+| 被参照回数 | ×2.0 | 多くの知識から参照=重要なカード/コンボ |
+| 信頼度 | ×1.0 | 確実性の高い知識を優先 |
+| 使用回数 | ×0.5 (log) | 実際に活用された実績 |
+| 深度減衰 | ×0.7^depth | 直接関連を優先、深い関連は減衰 |
+
+**例: 「魔将・信玄」検索時の動作**
+
+```
+[リクエスト] cardId = "魔将・信玄"
+     │
+     ▼
+[直接関連] depth=0
+  - シナジー: 信玄+突撃命令 (weight: 5.2, refCount: 8)
+  - コンボ: 信玄+進化カード (weight: 3.1, refCount: 3)
+     │
+     ▼
+[再帰取得] depth=1
+  - 戦略: 赤単アグロ基本戦略 (weight: 4.8, refCount: 12) ← 多数参照で高重み
+  - シナジー: 突撃命令+速攻ユニット (weight: 2.3, refCount: 2)
+     │
+     ▼
+[再帰取得] depth=2
+  - 対策: アグロ対策知識 (weight: 1.9, refCount: 5)
+     │
+     ▼
+[結果] 重みでソート、上位N件を返却
+  1. 戦略: 赤単アグロ基本戦略 (weight: 4.8) ← 最重要
+  2. シナジー: 信玄+突撃命令 (weight: 5.2)
+  3. コンボ: 信玄+進化カード (weight: 3.1)
+  ...
 ```
 
 ##### 3.6.4.6 プロンプトへの知識注入
@@ -1756,7 +1903,8 @@ const SUMMARIZATION_CONFIG = {
 │   │   ├── SynergyDetector.ts     # シナジーパターン検出
 │   │   ├── DeckEstimator.ts       # 相手デッキ推定
 │   │   ├── KnowledgeIndex.ts      # カード・色・タイプ別インデックス
-│   │   └── CircularRefGuard.ts    # 循環参照防止
+│   │   ├── ImportanceIndex.ts     # 被参照関係・重要度スコアリング
+│   │   └── RecursiveRetriever.ts  # 重み付き再帰取得
 │   │
 │   └── prompts/
 │       ├── system.ts              # システムプロンプト
