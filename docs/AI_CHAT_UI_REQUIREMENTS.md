@@ -33,6 +33,8 @@ AIの推論プロセスをユーザーに可視化し、戦略的フィードバ
 | `choice_response` | 選択肢への応答 | Choicesイベント受信時 |
 | `strategy_update` | 戦略変更通知 | 状況変化時 |
 | `feedback_request` | ユーザーフィードバック要求 | 分析完了時 |
+| `user_response` | ユーザーメッセージへの応答 | ユーザー入力時 |
+| `game_event` | ゲームイベント表示 | DisplayEffect/VisualEvent受信時 |
 | `system` | システムメッセージ | エラー・警告時 |
 
 ---
@@ -73,6 +75,8 @@ type MessageCategory =
   | "choice_response"
   | "strategy_update"
   | "feedback_request"
+  | "user_response"
+  | "game_event"
   | "system";
 
 interface MessageContent {
@@ -536,6 +540,246 @@ interface UserFeedback {
 }
 ```
 
+### 7.4 ユーザーチャットメッセージ
+
+承認/選択以外の自由なメッセージをユーザーが送信可能:
+
+#### メッセージオブジェクト
+
+```typescript
+interface UserChatMessage {
+  id: string;
+  timestamp: Date;
+  content: string;
+  threadTarget: "game_session" | "pregame" | "periodic";
+}
+
+interface AIConversationResponse {
+  id: string;
+  timestamp: Date;
+  category: "user_response";
+  priority: "medium";
+  content: {
+    title: "ユーザーへの応答";
+    body: string;
+    details?: ContentDetail[];
+  };
+  meta: {
+    model: "sonnet" | "opus";  // ユーザーメッセージにはSonnet以上
+    tokenUsed: number;
+    inResponseTo: string;      // 元のユーザーメッセージID
+  };
+  knowledgeExtracted?: {
+    stored: boolean;
+    entry?: KnowledgeEntrySummary;
+  };
+}
+
+interface KnowledgeEntrySummary {
+  topic: string;
+  insight: string;
+  type: "preference" | "strategy" | "correction" | "insight";
+}
+```
+
+#### ユーザーメッセージ例
+
+```json
+{
+  "id": "user-msg-001",
+  "timestamp": "2026-01-29T14:38:00.000Z",
+  "content": "この対戦相手は毎回インターセプトを温存してくる傾向があるから、もっと警戒して",
+  "threadTarget": "game_session"
+}
+```
+
+#### AI応答例
+
+```json
+{
+  "id": "msg-025",
+  "timestamp": "2026-01-29T14:38:02.000Z",
+  "category": "user_response",
+  "priority": "medium",
+  "content": {
+    "title": "ユーザーへの応答",
+    "body": "了解しました。相手のインターセプト温存傾向を考慮し、以下の対策を取ります：",
+    "details": [
+      {
+        "label": "戦略調整",
+        "value": "アタック前に相手の手札枚数とCPを確認し、インターセプト発動の可能性を重視",
+        "type": "text"
+      },
+      {
+        "label": "リスク回避",
+        "value": "重要ユニットでの単独アタックを控え、複数アタックで誘発を狙う",
+        "type": "text"
+      }
+    ]
+  },
+  "meta": {
+    "model": "sonnet",
+    "tokenUsed": 320,
+    "inResponseTo": "user-msg-001"
+  },
+  "knowledgeExtracted": {
+    "stored": true,
+    "entry": {
+      "topic": "対戦相手の傾向",
+      "insight": "インターセプトを温存する傾向がある。アタック時は警戒を強化。",
+      "type": "insight"
+    }
+  }
+}
+```
+
+### 7.5 バックグラウンドスレッドアクセス
+
+Pregame/Periodicスレッドへの直接アクセスUI:
+
+#### スレッドステータス表示
+
+```typescript
+interface BackgroundThreadStatus {
+  type: "pregame" | "periodic";
+  status: "idle" | "running" | "completed" | "error";
+  progress?: number;
+  lastResult?: {
+    timestamp: Date;
+    summary: string;
+  };
+  canInteract: boolean;
+}
+```
+
+#### バックグラウンドスレッドへのメッセージ例
+
+```json
+{
+  "id": "user-msg-002",
+  "timestamp": "2026-01-29T14:45:00.000Z",
+  "content": "相手のデッキについてもう少し詳しく分析して",
+  "threadTarget": "periodic"
+}
+```
+
+#### バックグラウンドスレッドUI表示
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ [定期分析スレッド]                              [展開] [×]  │
+├─────────────────────────────────────────────────────────────┤
+│ Status: 分析完了 (14:35)                                     │
+│ 次回分析: ラウンド4終了時                                    │
+├─────────────────────────────────────────────────────────────┤
+│ [Opus] 最新分析結果:                                         │
+│   相手デッキ: 黄色コントロール (確度75%)                      │
+│   警戒カード: 神の一撃、審判の天秤                            │
+├─────────────────────────────────────────────────────────────┤
+│ [入力] 追加で分析してほしいことを入力...           [送信]    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 7.6 ゲームイベント表示 (DisplayEffect/VisualEvent)
+
+ゲーム中のエフェクトイベントをチャットに軽量表示:
+
+### イベントメッセージカテゴリ
+
+```typescript
+interface GameEventMessage {
+  id: string;
+  timestamp: Date;
+  category: "game_event";
+  priority: "low";
+  content: {
+    title: string;          // 例: "効果発動", "トリガー発動"
+    body: string;           // 例: "裁きの光 → 竜騎兵を破壊"
+  };
+  meta: {
+    eventType: "display_effect" | "visual_effect" | "trigger";
+    source?: string;        // 発動元カード名
+    target?: string;        // 対象カード名
+    gameState: {
+      turn: number;
+      round: number;
+    };
+  };
+}
+```
+
+### イベント表示例
+
+```json
+{
+  "id": "evt-001",
+  "timestamp": "2026-01-29T14:36:45.000Z",
+  "category": "game_event",
+  "priority": "low",
+  "content": {
+    "title": "効果発動",
+    "body": "【不屈】: 魔将・信玄 → 行動権回復"
+  },
+  "meta": {
+    "eventType": "display_effect",
+    "source": "魔将・信玄",
+    "gameState": {
+      "turn": 5,
+      "round": 3
+    }
+  }
+}
+```
+
+```json
+{
+  "id": "evt-002",
+  "timestamp": "2026-01-29T14:37:20.000Z",
+  "category": "game_event",
+  "priority": "low",
+  "content": {
+    "title": "インターセプト",
+    "body": "裁きの光 → 竜騎兵を破壊"
+  },
+  "meta": {
+    "eventType": "display_effect",
+    "source": "裁きの光",
+    "target": "竜騎兵",
+    "gameState": {
+      "turn": 5,
+      "round": 3
+    }
+  }
+}
+```
+
+### イベント表示設定
+
+| 設定 | 説明 | デフォルト |
+|------|------|-----------|
+| showGameEvents | イベントを表示するか | true |
+| eventDetailLevel | "full" / "minimal" / "none" | "minimal" |
+| groupSimilarEvents | 連続する同種イベントをグループ化 | true |
+| eventOpacity | イベントメッセージの透明度 (0-1) | 0.7 |
+
+### チャット内イベント表示イメージ
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ [Sonnet] 14:36 ターン5: 竜騎兵を召喚                         │
+│   理由: CPを効率的に使用                                     │
+├ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┤
+│   [evt] 【貫通】: 竜騎兵に付与                               │
+├─────────────────────────────────────────────────────────────┤
+│ [Haiku] 14:37 ブロッカー選択: 魔将・信玄                     │
+├ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┤
+│   [evt] 裁きの光 → 竜騎兵を破壊                              │
+│   [evt] 【不屈】: 魔将・信玄 → 行動権回復                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## 8. 状態管理
@@ -577,24 +821,45 @@ interface AIChatStore {
 
 ```
 /src/components/ai/
-├── AIChat.tsx                 # メインコンテナ
-├── AIChatHeader.tsx           # ヘッダー（最小化/閉じるボタン）
-├── AIChatMessageList.tsx      # メッセージリスト
-├── AIChatMessage.tsx          # 個別メッセージ
-├── AIChatMessageDetail.tsx    # 詳細展開表示
-├── AIChatInteraction.tsx      # ユーザーインタラクション
-├── AIChatModelBadge.tsx       # モデルバッジ (Haiku/Sonnet/Opus)
-├── AIChatSettings.tsx         # 設定パネル
+├── AIChat.tsx                     # メインコンテナ
+├── AIChatHeader.tsx               # ヘッダー（最小化/閉じるボタン）
+├── AIChatMessageList.tsx          # メッセージリスト
+├── AIChatMessage.tsx              # 個別メッセージ
+├── AIChatMessageDetail.tsx        # 詳細展開表示
+├── AIChatInteraction.tsx          # ユーザーインタラクション
+├── AIChatModelBadge.tsx           # モデルバッジ (Haiku/Sonnet/Opus)
+├── AIChatSettings.tsx             # 設定パネル
+├── AIChatInput.tsx                # ユーザーメッセージ入力
+├── AIChatGameEvent.tsx            # ゲームイベント表示
+├── AIChatBackgroundThread.tsx     # バックグラウンドスレッドUI
 └── hooks/
-    ├── useAIChatStore.ts      # Zustandストア
-    ├── useAIChatMessages.ts   # メッセージ管理
-    └── useAIChatSettings.ts   # 設定管理
+    ├── useAIChatStore.ts          # Zustandストア
+    ├── useAIChatMessages.ts       # メッセージ管理
+    ├── useAIChatSettings.ts       # 設定管理
+    ├── useUserMessage.ts          # ユーザーメッセージ処理
+    ├── useBackgroundThread.ts     # バックグラウンドスレッドアクセス
+    └── useKnowledgeStore.ts       # Knowledge LocalStorage管理
 
 /src/ai/
-└── chat/
-    ├── types.ts               # メッセージ型定義
-    ├── formatter.ts           # メッセージフォーマット
-    └── toon.ts                # TOON変換ユーティリティ
+├── chat/
+│   ├── types.ts                   # メッセージ型定義
+│   ├── formatter.ts               # メッセージフォーマット
+│   ├── toon.ts                    # TOON変換ユーティリティ
+│   └── eventConverter.ts          # DisplayEffect/VisualEvent変換
+│
+├── thread/
+│   ├── types.ts                   # スレッド型定義
+│   ├── ThreadManager.ts           # スレッド管理
+│   ├── GameSessionThread.ts       # メインゲームスレッド
+│   ├── PregameThread.ts           # ゲーム開始前分析スレッド
+│   ├── PeriodicThread.ts          # 定期分析スレッド
+│   └── ContextWindowManager.ts    # コンテキストウィンドウ管理
+│
+└── knowledge/
+    ├── types.ts                   # Knowledge型定義
+    ├── KnowledgeStore.ts          # LocalStorage管理
+    ├── KnowledgeExtractor.ts      # 会話からの知識抽出
+    └── KnowledgeInjector.ts       # プロンプトへの知識注入
 ```
 
 ---
@@ -606,9 +871,13 @@ interface AIChatStore {
 | 1 | 基本メッセージ表示 | P0 |
 | 1 | ターン意思決定表示 | P0 |
 | 1 | 表示/非表示切り替え | P0 |
+| 1 | ゲームイベント表示 (DisplayEffect/VisualEvent) | P1 |
 | 2 | ゲーム開始前分析 + フィードバック | P0 |
 | 2 | 定期分析表示 | P1 |
 | 2 | 詳細展開表示 | P1 |
+| 2 | ユーザーメッセージ入力 + AI応答 | P1 |
+| 3 | バックグラウンドスレッドUI | P1 |
+| 3 | Knowledge Storage (LocalStorage) | P2 |
 | 3 | 設定パネル | P2 |
 | 3 | 位置変更 | P2 |
 | 3 | メッセージ履歴エクスポート | P3 |
@@ -625,4 +894,6 @@ interface AIChatStore {
 | choice_response | 随時 | Haiku | medium-high | none |
 | strategy_update | 状況に応じて | Sonnet | high | confirm |
 | feedback_request | 随時 | - | high | choice/text |
+| user_response | ユーザー入力時 | Sonnet/Opus | medium | none |
+| game_event | イベント発生時 | - | low | none |
 | system | 随時 | - | low | none |

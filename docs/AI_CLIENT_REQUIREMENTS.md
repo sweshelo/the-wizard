@@ -1,9 +1,9 @@
 # CODE OF JOKER AI Client 要件定義書
 
-**バージョン:** 1.2
+**バージョン:** 1.3
 **作成日:** 2026-01-29
 **更新日:** 2026-01-29
-**ステータス:** ドラフト (TOON形式・MCPサーバー追加)
+**ステータス:** ドラフト (スレッド管理・Knowledge Storage追加)
 
 ---
 
@@ -686,6 +686,373 @@ interface BackgroundAnalysis {
 }
 ```
 
+### 3.6 スレッド管理アーキテクチャ
+
+#### 3.6.1 スレッド構成
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      Thread Architecture                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │              Game Session Thread (Primary)                         │  │
+│  │  Model: Haiku/Sonnet (状況に応じて)                                │  │
+│  │  Purpose: リアルタイム意思決定                                      │  │
+│  │                                                                    │  │
+│  │  Contents:                                                         │  │
+│  │  - マリガン、ユニット召喚、選択応答                                 │  │
+│  │  - 最近のイベント履歴 (DisplayEffect/VisualEvent)                  │  │
+│  │  - 分析スレッドからの戦略サマリー                                   │  │
+│  │  - ユーザーからの追加メッセージと応答                               │  │
+│  └────────────────────────────────────────────────△──────────────────┘  │
+│                                                   │                      │
+│                         ┌─────────────────────────┤                      │
+│                         │  Strategy Injection     │                      │
+│                         │  (要約を注入)           │                      │
+│              ┌──────────┴────────┐  ┌────────────┴─────────┐            │
+│              │                   │  │                      │            │
+│   ┌──────────▼─────────┐  ┌──────▼──────────────┐          │            │
+│   │ Pregame Thread     │  │ Periodic Thread     │          │            │
+│   │ (One-shot)         │  │ (Background)        │          │            │
+│   │ Model: Opus        │  │ Model: Opus         │          │            │
+│   │                    │  │                     │          │            │
+│   │ - デッキ分析       │  │ - 2ラウンドごと     │          │            │
+│   │ - キーカード特定   │  │ - 捨札傾向分析      │          │            │
+│   │ - 戦略立案         │  │ - 戦略再評価        │          │            │
+│   │ → 完了後破棄       │  │ → ゲーム終了まで    │          │            │
+│   │                    │  │                     │          │            │
+│   │ [Chat UI Access]   │  │ [Chat UI Access]    │          │            │
+│   └────────────────────┘  └─────────────────────┘          │            │
+│                                                             │            │
+└─────────────────────────────────────────────────────────────┘            │
+```
+
+#### 3.6.2 スレッド定義
+
+```typescript
+interface ThreadManager {
+  // スレッド識別
+  gameId: string;
+  threads: {
+    gameSession: GameSessionThread;
+    pregame: PregameThread | null;
+    periodic: PeriodicThread | null;
+  };
+}
+
+interface BaseThread {
+  id: string;
+  type: "game_session" | "pregame" | "periodic";
+  createdAt: Date;
+  messages: ThreadMessage[];
+  model: "haiku" | "sonnet" | "opus";
+}
+
+interface GameSessionThread extends BaseThread {
+  type: "game_session";
+  model: "haiku" | "sonnet";  // 複雑性に応じて切り替え
+
+  // コンテキスト管理
+  contextWindow: {
+    maxTurns: number;           // 保持する最大ターン数 (default: 20)
+    currentMessages: number;
+    summarizedUntilTurn: number;
+  };
+
+  // 注入された戦略
+  injectedStrategies: StrategyInjection[];
+
+  // イベント履歴
+  gameEvents: GameEventEntry[];
+}
+
+interface PregameThread extends BaseThread {
+  type: "pregame";
+  model: "opus";
+  status: "running" | "completed" | "failed";
+  result?: PregameAnalysisResult;
+  userFeedback?: UserFeedback;
+}
+
+interface PeriodicThread extends BaseThread {
+  type: "periodic";
+  model: "opus";
+  lastAnalysisRound: number;
+  analyses: PeriodicAnalysisResult[];
+}
+```
+
+#### 3.6.3 ユーザーメッセージ処理
+
+ユーザーが承認/選択以外のメッセージを送信した場合の処理:
+
+```typescript
+interface UserChatMessage {
+  id: string;
+  timestamp: Date;
+  content: string;
+  context: {
+    currentTurn: number;
+    currentRound: number;
+    threadType: "game_session" | "pregame" | "periodic";
+  };
+}
+
+interface AIResponse {
+  id: string;
+  timestamp: Date;
+  content: string;
+  model: "sonnet" | "opus";  // ユーザーメッセージにはSonnet以上で応答
+
+  // 学習内容として保存するか
+  knowledge?: KnowledgeEntry;
+}
+
+// ユーザーメッセージ処理フロー
+async function handleUserMessage(
+  message: UserChatMessage,
+  thread: BaseThread
+): Promise<AIResponse> {
+  // 1. メッセージの意図を判定
+  const intent = analyzeIntent(message.content);
+
+  // 2. モデル選択
+  const model = intent.requiresDeepThinking ? "opus" : "sonnet";
+
+  // 3. 現在のスレッドコンテキストで応答生成
+  const response = await generateResponse(message, thread, model);
+
+  // 4. 知識として保存すべきか判定
+  if (shouldStoreAsKnowledge(message, response)) {
+    const knowledge = extractKnowledge(message, response);
+    await storeKnowledge(knowledge);
+  }
+
+  return response;
+}
+```
+
+#### 3.6.4 Knowledge Storage (LocalStorage)
+
+ユーザーとの対話から得られた知識を永続化:
+
+```typescript
+interface KnowledgeEntry {
+  id: string;
+  createdAt: Date;
+  gameId?: string;           // 特定ゲームに紐づく場合
+
+  type: "preference" | "strategy" | "correction" | "insight";
+
+  content: {
+    topic: string;           // 例: "ブロック判断", "進化タイミング"
+    insight: string;         // 学習内容
+    context?: string;        // 状況説明
+  };
+
+  // 適用条件
+  applicability: {
+    deckTypes?: string[];    // 特定デッキタイプに適用
+    situations?: string[];   // 特定状況に適用
+    always?: boolean;        // 常に適用
+  };
+
+  // 有効性
+  confidence: number;        // 0-1
+  usageCount: number;        // 参照回数
+  lastUsed?: Date;
+}
+
+// LocalStorage キー
+const KNOWLEDGE_STORAGE_KEY = "coj-ai-knowledge";
+
+// Knowledge Store
+interface KnowledgeStore {
+  entries: KnowledgeEntry[];
+
+  // 操作
+  add(entry: KnowledgeEntry): void;
+  search(query: KnowledgeQuery): KnowledgeEntry[];
+  getRelevant(gameState: AIGameContext): KnowledgeEntry[];
+  prune(): void;  // 古い/低信頼度のエントリを削除
+}
+
+// プロンプトへの注入
+function injectKnowledge(
+  prompt: string,
+  knowledge: KnowledgeEntry[]
+): string {
+  if (knowledge.length === 0) return prompt;
+
+  const knowledgeSection = knowledge
+    .map(k => `- ${k.content.topic}: ${k.content.insight}`)
+    .join("\n");
+
+  return `${prompt}
+
+## ユーザーから学習した知識
+${knowledgeSection}
+`;
+}
+```
+
+#### 3.6.5 DisplayEffect/VisualEvent 展開
+
+ゲームイベントをスレッドに軽量展開:
+
+```typescript
+// サーバーから受信するイベント
+interface DisplayEffectEvent {
+  type: "DisplayEffect";
+  payload: {
+    effect: {
+      name: string;           // 効果名
+      source?: string;        // 発動元カードID
+      message?: string;       // 表示メッセージ
+    };
+  };
+}
+
+interface VisualEffectEvent {
+  type: "VisualEffect";
+  payload: {
+    effect: string;           // エフェクト種別
+    target?: string;          // 対象ID
+    message?: string;         // 例: "ユニットを破壊"
+  };
+}
+
+// スレッドに展開する形式
+interface GameEventEntry {
+  turn: number;
+  round: number;
+  timestamp: Date;
+
+  type: "effect" | "action" | "phase_change";
+
+  // 軽量な要約形式
+  summary: string;
+
+  // 例:
+  // "【不屈】発動: 魔将・信玄 → 行動権回復"
+  // "効果: 裁きの光 → 竜騎兵を破壊"
+  // "トリガー発動: 突撃命令 → 全ユニット+2000BP"
+}
+
+// イベント変換
+function convertToGameEvent(
+  event: DisplayEffectEvent | VisualEffectEvent,
+  gameState: GameState
+): GameEventEntry {
+  const { turn, round } = gameState.game;
+
+  if (event.type === "DisplayEffect") {
+    const sourceName = resolveCardName(event.payload.effect.source, gameState);
+    return {
+      turn,
+      round,
+      timestamp: new Date(),
+      type: "effect",
+      summary: `【${event.payload.effect.name}】${sourceName ? `: ${sourceName}` : ""} ${event.payload.effect.message || ""}`
+    };
+  }
+
+  // VisualEffect
+  const targetName = resolveCardName(event.payload.target, gameState);
+  return {
+    turn,
+    round,
+    timestamp: new Date(),
+    type: "effect",
+    summary: `${event.payload.effect}${targetName ? `: ${targetName}` : ""} ${event.payload.message || ""}`
+  };
+}
+
+// スレッドへの追加
+function appendEventToThread(
+  thread: GameSessionThread,
+  event: GameEventEntry
+): void {
+  thread.gameEvents.push(event);
+
+  // 古いイベントは要約して圧縮
+  if (thread.gameEvents.length > MAX_EVENTS) {
+    compressOldEvents(thread);
+  }
+}
+```
+
+#### 3.6.6 バックグラウンドスレッドUIアクセス
+
+Pregame/Periodicスレッドへのユーザーアクセス:
+
+```typescript
+interface BackgroundThreadUIAccess {
+  // スレッド状態の表示
+  getStatus(threadType: "pregame" | "periodic"): ThreadStatus;
+
+  // 分析結果の詳細表示
+  getAnalysisDetail(threadId: string): AnalysisDetail;
+
+  // ユーザーがスレッドにメッセージを送信
+  sendMessage(
+    threadType: "pregame" | "periodic",
+    message: string
+  ): Promise<AIResponse>;
+
+  // 分析の再実行リクエスト
+  requestReanalysis(threadType: "pregame" | "periodic"): Promise<void>;
+}
+
+interface ThreadStatus {
+  type: "pregame" | "periodic";
+  status: "idle" | "running" | "completed" | "error";
+  progress?: number;          // 0-100
+  lastResult?: {
+    timestamp: Date;
+    summary: string;
+  };
+  nextScheduled?: Date;       // periodic のみ
+}
+```
+
+#### 3.6.7 コンテキストウィンドウ管理
+
+```typescript
+interface ContextWindowManager {
+  // 最大保持ターン数
+  maxTurns: number;
+
+  // 現在のコンテキストサイズ (推定トークン数)
+  estimatedTokens: number;
+
+  // 古いメッセージの要約
+  summarize(
+    messages: ThreadMessage[],
+    upToTurn: number
+  ): Promise<string>;
+
+  // コンテキスト圧縮
+  compress(thread: GameSessionThread): Promise<void>;
+}
+
+// 要約戦略
+const SUMMARIZATION_CONFIG = {
+  // 要約対象とするターン数の閾値
+  summarizeAfterTurns: 10,
+
+  // 要約時に保持する詳細ターン数
+  keepDetailedTurns: 5,
+
+  // 要約に使用するモデル
+  summaryModel: "haiku" as const,
+
+  // イベント要約の最大長
+  maxEventSummaryLength: 500,
+};
+```
+
 ---
 
 ## 4. 実装計画
@@ -817,7 +1184,24 @@ interface BackgroundAnalysis {
 │   │   ├── types.ts               # メッセージ型定義
 │   │   ├── formatter.ts           # メッセージフォーマット
 │   │   ├── MessageBuilder.ts      # メッセージ構築
-│   │   └── toonFormatter.ts       # TOON形式フォーマット
+│   │   ├── toonFormatter.ts       # TOON形式フォーマット
+│   │   └── eventConverter.ts      # DisplayEffect/VisualEvent変換
+│   │
+│   ├── thread/                    # スレッド管理
+│   │   ├── index.ts               # エクスポート
+│   │   ├── types.ts               # スレッド型定義
+│   │   ├── ThreadManager.ts       # スレッド管理
+│   │   ├── GameSessionThread.ts   # メインゲームスレッド
+│   │   ├── PregameThread.ts       # ゲーム開始前分析スレッド
+│   │   ├── PeriodicThread.ts      # 定期分析スレッド
+│   │   └── ContextWindowManager.ts # コンテキストウィンドウ管理
+│   │
+│   ├── knowledge/                 # 知識ストレージ (LocalStorage)
+│   │   ├── index.ts               # エクスポート
+│   │   ├── types.ts               # Knowledge型定義
+│   │   ├── KnowledgeStore.ts      # LocalStorage管理
+│   │   ├── KnowledgeExtractor.ts  # 会話からの知識抽出
+│   │   └── KnowledgeInjector.ts   # プロンプトへの知識注入
 │   │
 │   └── prompts/
 │       ├── system.ts              # システムプロンプト
