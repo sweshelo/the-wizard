@@ -1,9 +1,9 @@
 # CODE OF JOKER AI Client 要件定義書
 
-**バージョン:** 1.1
+**バージョン:** 1.2
 **作成日:** 2026-01-29
 **更新日:** 2026-01-29
-**ステータス:** ドラフト (Opus戦略更新)
+**ステータス:** ドラフト (TOON形式・MCPサーバー追加)
 
 ---
 
@@ -378,6 +378,236 @@ interface CompactCard {
 }
 ```
 
+### 3.4.1 TOON (Token-Oriented Object Notation) フォーマット
+
+JSONのトークン効率を改善するため、**TOON形式**を採用する。
+
+**参考:** [toon-format/toon](https://github.com/toon-format/toon)
+
+#### TOONとは
+- JSONデータモデルのコンパクトで人間可読なエンコーディング
+- YAMLスタイルのインデントとCSVスタイルの表形式を組み合わせ
+- **30-60%のトークン削減**を実現
+- LLMの理解精度を維持または向上（73.9% vs JSON 69.7%）
+
+#### TOON変換例
+
+**JSON形式 (従来):**
+```json
+{
+  "myField": [
+    {"id": "u1", "name": "竜騎兵", "bp": 5000, "active": true},
+    {"id": "u2", "name": "魔将・信玄", "bp": 7000, "active": false}
+  ]
+}
+```
+
+**TOON形式 (新規):**
+```toon
+myField[2]{id,name,bp,active}:
+  u1,竜騎兵,5000,true
+  u2,魔将・信玄,7000,false
+```
+
+#### AIGameContext のTOON表現
+
+```toon
+context:
+  turn: 5
+  round: 2
+  isMyTurn: true
+
+self:
+  life: 6
+  cp: 4/7
+  jokerGauge: 3
+  handCount: 4
+  deckCount: 22
+
+opponent:
+  life: 5
+  cp: 2/7
+  jokerGauge: 5
+  handCount: 3
+  deckCount: 18
+
+myField[2]{id,name,bp,active,abilities}:
+  u1,竜騎兵,5000,true,[]
+  u2,魔将・信玄,7000,false,[不屈]
+
+opponentField[1]{id,name,bp,active,abilities}:
+  u3,蒼炎の魔術師,4000,true,[加護]
+
+myHand[3]{id,name,cost,type,playable}:
+  c1,炎の槍,2,intercept,true
+  c2,進化の秘宝,3,trigger,true
+  c3,巨神兵,6,unit,false
+
+myTrigger[1]{id,name}:
+  t1,突撃命令
+```
+
+**期待削減:** 従来JSON比で約40-50%のトークン削減
+
+### 3.4.2 カタログ・キーワード参照システム
+
+ゲームオブジェクト内にはカード効果テキストが含まれないため、外部カタログを参照する必要がある。
+
+#### データソース
+
+| ファイル | パス | 内容 |
+|---------|------|------|
+| カタログ | `/src/submodule/suit/catalog/catalog.json` | カード情報（効果テキスト含む） |
+| キーワード | `/src/submodule/suit/catalog/keywords.json` | キーワード能力定義 |
+
+#### カタログエントリ構造
+```typescript
+interface CatalogEntry {
+  id: string;           // カードID (例: "＜ウィルス・炎＞")
+  name: string;         // カード名
+  rarity: string;       // レアリティ
+  type: "unit" | "trigger" | "intercept" | "advanced_unit" | "virus";
+  color: number;        // 1:赤, 2:黄, 3:青, 4:緑, 5:紫
+  species: string[];    // 種族
+  cost: number;         // コスト
+  bp: [number, number, number];  // BP (Lv1, Lv2, Lv3)
+  ability: string;      // 効果テキスト（改行含む）
+  originality: string;  // オリジナリティ
+}
+```
+
+#### キーワード能力構造
+```typescript
+interface KeywordEntry {
+  title: string;        // キーワード名 (例: "不屈")
+  matcher: string;      // マッチパターン (例: "【不屈】")
+  text: string;         // 短い説明
+  description: string;  // 詳細説明
+}
+```
+
+### 3.4.3 MCP サーバー実装
+
+Claude APIのTool Use機能を活用し、カタログ・キーワード参照をMCPサーバーとして実装する。
+
+#### MCPサーバー定義
+
+```typescript
+// MCP Server: catalog-lookup
+interface CatalogMCPServer {
+  name: "coj-catalog";
+  version: "1.0.0";
+  tools: [
+    {
+      name: "lookup_card";
+      description: "カードIDまたは名前からカード情報を取得";
+      parameters: {
+        query: string;      // カードIDまたは名前
+        fields?: string[];  // 取得するフィールド (省略時は全て)
+      };
+      returns: CatalogEntry | null;
+    },
+    {
+      name: "lookup_keyword";
+      description: "キーワード能力の説明を取得";
+      parameters: {
+        keyword: string;    // キーワード名またはマッチパターン
+      };
+      returns: KeywordEntry | null;
+    },
+    {
+      name: "search_cards";
+      description: "条件に合うカードを検索";
+      parameters: {
+        color?: number;
+        type?: string;
+        costRange?: [number, number];
+        species?: string;
+        abilityContains?: string;  // 効果テキスト部分一致
+        limit?: number;
+      };
+      returns: CatalogEntry[];
+    },
+    {
+      name: "get_card_abilities";
+      description: "カードの効果テキストをパースしてキーワード能力リストを返す";
+      parameters: {
+        cardId: string;
+      };
+      returns: {
+        rawAbility: string;
+        keywords: KeywordEntry[];
+        effects: string[];  // キーワード以外の効果
+      };
+    }
+  ];
+}
+```
+
+#### Haiku/Sonnet向けツール呼び出し
+
+軽量モデル（Haiku/Sonnet）が使用するTool定義:
+
+```typescript
+const catalogTools = [
+  {
+    name: "lookup_card",
+    description: "カード情報を取得。効果テキストやキーワード能力を確認する際に使用。",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "カードIDまたはカード名"
+        },
+        fields: {
+          type: "array",
+          items: { type: "string" },
+          description: "取得フィールド。省略で全て。例: ['ability', 'bp', 'cost']"
+        }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "lookup_keyword",
+    description: "【不屈】や【加護】などのキーワード能力の効果を確認",
+    input_schema: {
+      type: "object",
+      properties: {
+        keyword: {
+          type: "string",
+          description: "キーワード名。例: '不屈', '加護', '貫通'"
+        }
+      },
+      required: ["keyword"]
+    }
+  }
+];
+```
+
+#### ツール使用フロー
+
+```
+1. AIがゲーム状態を受信
+2. 不明なカード効果がある場合、lookup_card ツールを呼び出し
+3. キーワード能力の詳細が必要な場合、lookup_keyword ツールを呼び出し
+4. 取得した情報を元に意思決定
+```
+
+#### キャッシュ戦略
+
+```typescript
+interface CatalogCache {
+  // ゲーム中に参照されたカードをキャッシュ
+  cards: Map<string, CatalogEntry>;
+  keywords: Map<string, KeywordEntry>;
+
+  // キャッシュヒット時はAPI呼び出し不要
+  // 1ゲーム中の同一カード参照を最適化
+}
+```
+
 ### 3.5 モデル使い分け戦略
 
 #### 3.5.1 基本モデル選択
@@ -566,6 +796,29 @@ interface BackgroundAnalysis {
 │   ├── PreGameAnalyzer.ts         # ゲーム開始前分析
 │   ├── types.ts                   # AI固有の型定義
 │   ├── constants.ts               # 設定値
+│   │
+│   ├── catalog/                   # カタログ参照システム
+│   │   ├── index.ts               # エクスポート
+│   │   ├── CatalogService.ts      # カタログ検索サービス
+│   │   ├── KeywordService.ts      # キーワード能力検索
+│   │   ├── CatalogCache.ts        # キャッシュ管理
+│   │   ├── CatalogTools.ts        # Claude Tool定義
+│   │   └── types.ts               # カタログ型定義
+│   │
+│   ├── toon/                      # TOON形式変換
+│   │   ├── index.ts               # エクスポート
+│   │   ├── encoder.ts             # JSON→TOON変換
+│   │   ├── decoder.ts             # TOON→JSON変換
+│   │   ├── gameState.ts           # ゲーム状態TOON変換
+│   │   └── types.ts               # TOON型定義
+│   │
+│   ├── chat/                      # チャットメッセージ管理
+│   │   ├── index.ts               # エクスポート
+│   │   ├── types.ts               # メッセージ型定義
+│   │   ├── formatter.ts           # メッセージフォーマット
+│   │   ├── MessageBuilder.ts      # メッセージ構築
+│   │   └── toonFormatter.ts       # TOON形式フォーマット
+│   │
 │   └── prompts/
 │       ├── system.ts              # システムプロンプト
 │       ├── mulligan.ts            # マリガン用
@@ -577,15 +830,22 @@ interface BackgroundAnalysis {
 │
 └── components/
     └── ai/
-        ├── AIChat.tsx             # チャットUIメインコンポーネント
-        ├── AIChatMessage.tsx      # メッセージ表示コンポーネント
-        ├── AIChatInput.tsx        # ユーザー入力（フィードバック）
-        ├── AIAnalysisCard.tsx     # 分析結果カード
-        ├── AIStrategyBadge.tsx    # 戦略バッジ表示
+        ├── AIChat.tsx             # チャットUIメインコンテナ
+        ├── AIChatHeader.tsx       # ヘッダー（最小化/閉じる）
+        ├── AIChatMessageList.tsx  # メッセージリスト
+        ├── AIChatMessage.tsx      # 個別メッセージ表示
+        ├── AIChatMessageDetail.tsx # 詳細展開表示
+        ├── AIChatInteraction.tsx  # ユーザーインタラクション
+        ├── AIChatModelBadge.tsx   # モデルバッジ表示
+        ├── AIChatSettings.tsx     # 設定パネル
         └── hooks/
-            ├── useAIChat.ts       # チャット状態管理
-            └── useAIAnalysis.ts   # 分析結果管理
+            ├── useAIChatStore.ts  # Zustandストア
+            ├── useAIChatMessages.ts # メッセージ管理
+            └── useAIChatSettings.ts # 設定管理
 ```
+
+**関連ドキュメント:**
+- Chat UI詳細仕様: [AI_CHAT_UI_REQUIREMENTS.md](./AI_CHAT_UI_REQUIREMENTS.md)
 
 ---
 
