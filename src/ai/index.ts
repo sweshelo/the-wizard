@@ -57,3 +57,6 @@ export * from './prompts';
 
 // Chat
 export * from './chat';
+
+// Catalog
+export * from './catalog';
