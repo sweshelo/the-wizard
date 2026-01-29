@@ -23,3 +23,28 @@ export {
   buildInterceptChoicePrompt,
   type ChoicePromptResponse,
 } from './choice';
+
+// Strategy prompts
+export {
+  getColorName,
+  getColorStrategy,
+  formatDeckStrategy,
+  buildStrategyPrompt,
+  COLOR_STRATEGIES,
+  type DeckColors,
+  type ColorStrategy,
+} from './strategy';
+
+// Analysis prompts
+export {
+  analyzeGamePhase,
+  analyzeBoardAdvantage,
+  analyzeResourceSituation,
+  generateSituationalAdvice,
+  formatAnalysis,
+  type GamePhaseName,
+  type GamePhase,
+  type BoardAdvantageStatus,
+  type BoardAdvantage,
+  type ResourceAnalysis,
+} from './analysis';
