@@ -4,7 +4,7 @@
 
 ## 概要
 
-Vitestによるテスト環境をセットアップし、TDD開発を可能にする。
+Bun のビルトインテスト機能を使用したテスト環境をセットアップし、TDD開発を可能にする。
 
 ## 前提条件
 
@@ -12,103 +12,149 @@ Vitestによるテスト環境をセットアップし、TDD開発を可能に�
 
 ## 成果物
 
-- `vitest.config.ts` - Vitest設定ファイル
+- `bunfig.toml` - Bun設定ファイル（テスト設定）
 - `src/test/setup.ts` - テストセットアップファイル
 - `src/test/mocks/` - 共通モックディレクトリ
-- `package.json` - テストスクリプト追加
 
 ## 作業手順
 
-### 1. 依存関係のインストール
+### 1. 依存関係のインストール（React Component テスト用）
 
 ```bash
-bun add -d vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/jest-dom
+bun add -d @testing-library/react @testing-library/dom happy-dom
 ```
 
-### 2. vitest.config.ts の作成
+### 2. bunfig.toml の作成
 
-```typescript
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+```toml
+[test]
+preload = ["./src/test/setup.ts"]
 
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    coverage: {
-      reporter: ['text', 'html'],
-      include: ['src/ai/**/*.ts', 'src/components/ai/**/*.tsx'],
-    },
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-});
+[test.coverage]
+reporter = ["text", "html"]
 ```
 
 ### 3. src/test/setup.ts の作成
 
 ```typescript
-import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+// src/test/setup.ts
+import { mock } from 'bun:test';
 
-// グローバルモックの設定
-vi.mock('next/navigation', () => ({
+// happy-dom のセットアップ（React Component テスト用）
+import { GlobalRegistrator } from '@happy-dom/global-registrator';
+GlobalRegistrator.register();
+
+// Next.js navigation のモック
+mock.module('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
+    push: mock(() => {}),
+    replace: mock(() => {}),
+    prefetch: mock(() => {}),
   }),
   useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/',
 }));
 ```
 
-### 4. package.json にスクリプト追加
-
-```json
-{
-  "scripts": {
-    "test": "vitest",
-    "test:watch": "vitest --watch",
-    "test:coverage": "vitest --coverage",
-    "test:ui": "vitest --ui"
-  }
-}
-```
-
-### 5. src/test/mocks/ ディレクトリ作成
+### 4. src/test/mocks/ ディレクトリ作成
 
 ```
 src/test/mocks/
 ├── gameState.ts      # ゲーム状態モック
 ├── websocket.ts      # WebSocketモック
-├── claude.ts         # Claude APIモック
+├── anthropic.ts      # Anthropic APIモック（重要）
 └── index.ts          # エクスポート
+```
+
+### 5. Anthropic API モックの作成（重要）
+
+```typescript
+// src/test/mocks/anthropic.ts
+import { mock } from 'bun:test';
+
+/**
+ * Anthropic API のモッククライアント
+ *
+ * 重要: テストでは絶対に実際のAPIを呼び出さないこと
+ * 理由:
+ * - APIコスト（テスト毎に課金される）
+ * - レート制限
+ * - テスト速度（API呼び出しは遅い）
+ * - 再現性（APIレスポンスは非決定的）
+ */
+export const createMockAnthropicClient = () => ({
+  messages: {
+    create: mock(() => Promise.resolve({
+      id: 'mock-msg-id',
+      type: 'message',
+      role: 'assistant',
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            action: 'UnitDrive',
+            targetId: 'u1',
+            reason: 'テスト用モックレスポンス'
+          })
+        }
+      ],
+      model: 'claude-3-haiku-20240307',
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 100, output_tokens: 50 }
+    }))
+  }
+});
+
+/**
+ * 特定のレスポンスを返すモックを作成
+ */
+export const createMockWithResponse = (response: unknown) => ({
+  messages: {
+    create: mock(() => Promise.resolve({
+      id: 'mock-msg-id',
+      type: 'message',
+      role: 'assistant',
+      content: [
+        {
+          type: 'text',
+          text: typeof response === 'string' ? response : JSON.stringify(response)
+        }
+      ],
+      model: 'claude-3-haiku-20240307',
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 100, output_tokens: 50 }
+    }))
+  }
+});
+
+/**
+ * エラーを返すモックを作成
+ */
+export const createMockWithError = (error: Error) => ({
+  messages: {
+    create: mock(() => Promise.reject(error))
+  }
+});
 ```
 
 ## TDDチェックリスト
 
 このタスクは環境構築のため、通常のTDDサイクルではなく以下を確認:
 
-- [ ] Vitestが正常に動作すること
+- [ ] `bun test` が正常に動作すること
 - [ ] サンプルテストがパスすること
-- [ ] React Componentのテストが動作すること
+- [ ] DOM環境（happy-dom）が利用可能なこと
 - [ ] モックが正しくインポートできること
+- [ ] Anthropic APIモックが正しく動作すること
 
 ## 確認用サンプルテスト
 
 ```typescript
 // src/test/sample.test.ts
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 
 describe('テスト環境', () => {
-  it('Vitestが動作すること', () => {
+  it('Bun Test が動作すること', () => {
     expect(1 + 1).toBe(2);
   });
 
@@ -120,10 +166,51 @@ describe('テスト環境', () => {
 });
 ```
 
+```typescript
+// src/test/mocks.test.ts
+import { describe, it, expect } from 'bun:test';
+import { createMockAnthropicClient, createMockWithResponse } from './mocks/anthropic';
+
+describe('Anthropic モック', () => {
+  it('デフォルトレスポンスを返すこと', async () => {
+    const client = createMockAnthropicClient();
+    const response = await client.messages.create({});
+
+    expect(response.content[0].type).toBe('text');
+    expect(client.messages.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('カスタムレスポンスを返すこと', async () => {
+    const client = createMockWithResponse({ action: 'TurnEnd' });
+    const response = await client.messages.create({});
+
+    const text = response.content[0].text;
+    expect(JSON.parse(text).action).toBe('TurnEnd');
+  });
+});
+```
+
+## テスト実行コマンド
+
+```bash
+# テスト実行
+bun test
+
+# ウォッチモード
+bun test --watch
+
+# カバレッジ
+bun test --coverage
+
+# 特定ファイルのみ
+bun test sample
+```
+
 ## 完了条件
 
 - [ ] `bun test` でテストが実行される
 - [ ] サンプルテストがパスする
+- [ ] Anthropic APIモックが正しく動作する
 - [ ] カバレッジレポートが生成される
 
 ---
@@ -136,4 +223,5 @@ describe('テスト環境', () => {
 
 ## 課題・メモ
 
-- なし
+- Anthropic API は絶対にモックを使用すること（コスト・レート制限対策）
+- E2Eテストで実APIを使う場合は環境変数 `TEST_USE_REAL_API=true` で明示的に有効化

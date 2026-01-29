@@ -200,31 +200,24 @@ it('should return correct CP when player has resources', () => {
 
 ## テスト環境セットアップ
 
-### 必要なパッケージ
+### Bun Test を使用
+
+本プロジェクトでは **Bun のビルトインテスト機能** を使用する。
+Vitest や Jest は不要。
 
 ```bash
-bun add -d vitest @testing-library/react @testing-library/jest-dom jsdom
+# 必要に応じて追加（React Component テスト用）
+bun add -d @testing-library/react @testing-library/dom happy-dom
 ```
 
-### vitest設定 (vitest.config.ts)
+### bunfig.toml 設定
 
-```typescript
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+```toml
+[test]
+preload = ["./src/test/setup.ts"]
 
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    coverage: {
-      reporter: ['text', 'html'],
-      include: ['src/ai/**/*.ts'],
-    },
-  },
-});
+[test.coverage]
+reporter = ["text", "html"]
 ```
 
 ### テスト実行コマンド
@@ -241,20 +234,57 @@ bun test --coverage
 
 # 特定ファイルのみ
 bun test StateTranslator
+
+# 特定ディレクトリのみ
+bun test src/ai/
+```
+
+### テストファイルの書き方
+
+```typescript
+// Bun Test は Jest 互換 API を持つ
+import { describe, it, expect, beforeEach, mock, spyOn } from 'bun:test';
+
+describe('MyModule', () => {
+  it('should work', () => {
+    expect(1 + 1).toBe(2);
+  });
+});
 ```
 
 ---
 
 ## モックの活用
 
+### 重要: 外部APIは必ずモックする
+
+**Anthropic API (Claude) は絶対に実際のAPIを呼び出さない。**
+
+理由:
+- APIコスト（テスト毎に課金される）
+- レート制限
+- テスト速度（API呼び出しは遅い）
+- 再現性（APIレスポンスは非決定的）
+- オフライン開発対応
+
+### モック戦略
+
+| テストレベル | API呼び出し | 用途 |
+|-------------|-------------|------|
+| ユニットテスト | **常にモック** | 個別機能の検証 |
+| 統合テスト | **モック（デフォルト）** | モジュール間連携 |
+| E2Eテスト | オプションで実API | 環境変数で切替 |
+
 ### WebSocket モック
 
 ```typescript
 // src/test/mocks/websocket.ts
+import { mock } from 'bun:test';
+
 export const createMockWebSocket = () => ({
-  send: vi.fn(),
-  request: vi.fn(),
-  onMessage: vi.fn(),
+  send: mock(() => {}),
+  request: mock(() => Promise.resolve({})),
+  onMessage: mock(() => {}),
 });
 ```
 
@@ -262,6 +292,8 @@ export const createMockWebSocket = () => ({
 
 ```typescript
 // src/test/mocks/gameState.ts
+import type { GameState } from '@/submodule/suit/types/game';
+
 export const createMockGameState = (
   overrides?: Partial<GameState>
 ): GameState => ({
@@ -280,14 +312,147 @@ export const createMockGameState = (
 });
 ```
 
-### Claude API モック
+### Claude API モック（重要）
 
 ```typescript
-// src/test/mocks/claude.ts
-export const createMockClaudeClient = () => ({
-  complete: vi.fn().mockResolvedValue({
-    content: [{ text: '{"action": "UnitDrive", ...}' }],
-  }),
+// src/test/mocks/anthropic.ts
+import { mock } from 'bun:test';
+
+/**
+ * Anthropic API のモッククライアント
+ *
+ * 注意: テストでは絶対に実際のAPIを呼び出さないこと
+ * - コストがかかる
+ * - レート制限がある
+ * - レスポンスが非決定的
+ */
+export const createMockAnthropicClient = () => ({
+  messages: {
+    create: mock(() => Promise.resolve({
+      id: 'mock-msg-id',
+      type: 'message',
+      role: 'assistant',
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            action: 'UnitDrive',
+            targetId: 'u1',
+            reason: 'テスト用モックレスポンス'
+          })
+        }
+      ],
+      model: 'claude-3-haiku-20240307',
+      stop_reason: 'end_turn',
+      usage: {
+        input_tokens: 100,
+        output_tokens: 50
+      }
+    }))
+  }
+});
+
+/**
+ * 特定のレスポンスを返すモックを作成
+ */
+export const createMockWithResponse = (response: unknown) => ({
+  messages: {
+    create: mock(() => Promise.resolve({
+      id: 'mock-msg-id',
+      type: 'message',
+      role: 'assistant',
+      content: [
+        {
+          type: 'text',
+          text: typeof response === 'string' ? response : JSON.stringify(response)
+        }
+      ],
+      model: 'claude-3-haiku-20240307',
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 100, output_tokens: 50 }
+    }))
+  }
+});
+
+/**
+ * エラーを返すモックを作成
+ */
+export const createMockWithError = (error: Error) => ({
+  messages: {
+    create: mock(() => Promise.reject(error))
+  }
+});
+
+/**
+ * タイムアウトをシミュレートするモック
+ */
+export const createMockWithTimeout = (delayMs: number) => ({
+  messages: {
+    create: mock(() => new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), delayMs);
+    }))
+  }
+});
+```
+
+### モックの使用例
+
+```typescript
+// src/ai/LLMClient.test.ts
+import { describe, it, expect, beforeEach } from 'bun:test';
+import {
+  createMockAnthropicClient,
+  createMockWithResponse,
+  createMockWithError
+} from '@/test/mocks/anthropic';
+import { LLMClient } from './LLMClient';
+
+describe('LLMClient', () => {
+  describe('decide', () => {
+    it('should parse valid JSON response', async () => {
+      // Arrange
+      const mockClient = createMockWithResponse({
+        action: 'UnitDrive',
+        targetId: 'u1'
+      });
+      const llmClient = new LLMClient(mockClient);
+
+      // Act
+      const result = await llmClient.decide(mockGameContext);
+
+      // Assert
+      expect(result.action).toBe('UnitDrive');
+      expect(mockClient.messages.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('should fallback on API error', async () => {
+      // Arrange
+      const mockClient = createMockWithError(new Error('API Error'));
+      const llmClient = new LLMClient(mockClient);
+
+      // Act
+      const result = await llmClient.decide(mockGameContext);
+
+      // Assert
+      expect(result.fallback).toBe(true);
+    });
+  });
+});
+```
+
+### E2Eテストでの実API使用（オプション）
+
+```typescript
+// src/ai/LLMClient.e2e.test.ts
+import { describe, it, expect } from 'bun:test';
+
+// 環境変数で制御
+const USE_REAL_API = process.env.TEST_USE_REAL_API === 'true';
+
+describe.skipIf(!USE_REAL_API)('LLMClient E2E', () => {
+  it('should work with real API', async () => {
+    // 実際のAPIを使ったテスト（CI/CDでは通常スキップ）
+  });
 });
 ```
 
@@ -316,4 +481,4 @@ export const createMockClaudeClient = () => ({
 
 - [t-wada のTDD入門](https://speakerdeck.com/twada)
 - [テスト駆動開発 (Kent Beck著)](https://www.amazon.co.jp/dp/4274217884)
-- [Vitest Documentation](https://vitest.dev/)
+- [Bun Test Documentation](https://bun.sh/docs/cli/test)
