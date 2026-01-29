@@ -182,4 +182,78 @@ describe('LLMClient', () => {
       expect(error.originalError).toBe(original);
     });
   });
+
+  describe('sendWithHistory', () => {
+    beforeEach(() => {
+      // Reset mock to default behavior for sendWithHistory tests
+      mockCreate.mockImplementation(() =>
+        Promise.resolve({
+          content: [{ type: 'text', text: 'Test response' }],
+          usage: { input_tokens: 100, output_tokens: 50 },
+        })
+      );
+    });
+
+    it('should send message with conversation history', async () => {
+      const history = [
+        { role: 'user' as const, content: 'Hello' },
+        { role: 'assistant' as const, content: 'Hi there!' },
+      ];
+
+      const response = await client.sendWithHistory('System prompt', history, 'New question');
+
+      expect(response.content).toBe('Test response');
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: [
+            { role: 'user', content: 'Hello' },
+            { role: 'assistant', content: 'Hi there!' },
+            { role: 'user', content: 'New question' },
+          ],
+        })
+      );
+    });
+
+    it('should handle empty history', async () => {
+      const response = await client.sendWithHistory('System prompt', [], 'Question');
+
+      expect(response.content).toBe('Test response');
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: [{ role: 'user', content: 'Question' }],
+        })
+      );
+    });
+
+    it('should calculate cost correctly with history', async () => {
+      const history = [
+        { role: 'user' as const, content: 'Hello' },
+        { role: 'assistant' as const, content: 'Hi!' },
+      ];
+
+      const response = await client.sendWithHistory('System', history, 'New');
+
+      const expectedCost =
+        (100 / 1_000_000) * MODEL_COST.sonnet.input + (50 / 1_000_000) * MODEL_COST.sonnet.output;
+      expect(response.estimatedCost).toBeCloseTo(expectedCost, 10);
+    });
+
+    it('should use specified model', async () => {
+      await client.sendWithHistory('System', [], 'User', { model: 'haiku' });
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: expect.stringContaining('haiku'),
+        })
+      );
+    });
+
+    it('should handle errors same as send', async () => {
+      mockCreate.mockImplementation(() => {
+        return Promise.reject(new Error('API error'));
+      });
+
+      await expect(client.sendWithHistory('System', [], 'User')).rejects.toThrow(LLMError);
+    });
+  });
 });

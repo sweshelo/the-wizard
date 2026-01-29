@@ -1,5 +1,9 @@
 // src/ai/thread/ContextWindowManager.ts
 
+import { ThreadSummarizer, type SummarizationConfig, type SummaryResult } from './ThreadSummarizer';
+import type { LLMClient } from '../LLMClient';
+import { CONTEXT_CONFIG } from '../constants';
+
 /**
  * コンテキストエントリ
  * 会話履歴の1つのメッセージを表す
@@ -27,10 +31,16 @@ export interface ContextEntry {
 export interface ContextWindowManagerConfig {
   /** 最大トークン数 */
   maxTokens?: number;
+  /** 最大ターン数 */
+  maxTurns?: number;
   /** 圧縮を開始するしきい値（0-1の割合） */
   compactThreshold?: number;
   /** 要約を有効にするか */
   enableSummarization?: boolean;
+  /** LLM要約設定 */
+  summarizationConfig?: Partial<SummarizationConfig>;
+  /** LLMクライアント（LLM要約に使用） */
+  llmClient?: LLMClient;
 }
 
 /**
@@ -48,14 +58,22 @@ export interface LLMMessage {
 export class ContextWindowManager {
   private entries: ContextEntry[] = [];
   private maxTokens: number;
+  private maxTurns: number;
   private compactThreshold: number;
   private enableSummarization: boolean;
   private idCounter: number = 0;
+  private summarizer: ThreadSummarizer;
+  private llmClient?: LLMClient;
 
   constructor(config: ContextWindowManagerConfig = {}) {
-    this.maxTokens = config.maxTokens ?? 4096;
+    this.maxTokens = config.maxTokens ?? CONTEXT_CONFIG.DEFAULT_MAX_TOKENS;
+    this.maxTurns = config.maxTurns ?? CONTEXT_CONFIG.DEFAULT_MAX_TURNS;
     this.compactThreshold = config.compactThreshold ?? 0.8;
     this.enableSummarization = config.enableSummarization ?? false;
+    this.summarizer = new ThreadSummarizer({
+      summarizationConfig: config.summarizationConfig,
+    });
+    this.llmClient = config.llmClient;
   }
 
   /**
@@ -128,6 +146,7 @@ export class ContextWindowManager {
   /**
    * コンテキストを圧縮
    * 古い低優先度エントリを削除し、必要に応じて要約を作成
+   * 高世代エントリは優先的に保持される
    */
   compact(): void {
     const totalTokens = this.getTotalTokens();
@@ -137,10 +156,16 @@ export class ContextWindowManager {
       return;
     }
 
-    // 優先度でソート（low -> normal -> high）
+    // 優先度と世代でソート（低優先度・低世代が先に削除される）
     const sortedByPriority = [...this.entries].sort((a, b) => {
       const priorityOrder = { low: 0, normal: 1, high: 2 };
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
+      // まず優先度で比較
+      const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (priorityDiff !== 0) {
+        return priorityDiff;
+      }
+      // 同じ優先度なら世代で比較（低世代が先）
+      return a.generation - b.generation;
     });
 
     // 低優先度から削除
@@ -219,6 +244,125 @@ export class ContextWindowManager {
    */
   getMaxTokens(): number {
     return this.maxTokens;
+  }
+
+  /**
+   * 最大ターン数を取得
+   */
+  getMaxTurns(): number {
+    return this.maxTurns;
+  }
+
+  /**
+   * 指定ターンまでのエントリを要約
+   */
+  summarize(upToTurn: number): SummaryResult {
+    if (upToTurn <= 0) {
+      return {
+        summary: '',
+        originalTokens: 0,
+        compressedTokens: 0,
+        entriesProcessed: 0,
+      };
+    }
+
+    const entriesToSummarize = this.entries.slice(0, Math.min(upToTurn, this.entries.length));
+    return this.summarizer.summarize(entriesToSummarize);
+  }
+
+  /**
+   * 要約エントリを作成
+   * 指定ターンまでのエントリを要約し、新しいエントリとして返す
+   */
+  createSummaryEntry(upToTurn: number): ContextEntry {
+    const entriesToSummarize = this.entries.slice(0, Math.min(upToTurn, this.entries.length));
+    const result = this.summarizer.summarize(entriesToSummarize);
+
+    // 要約対象エントリの最大世代を取得
+    const maxGeneration = Math.max(...entriesToSummarize.map(e => e.generation), 1);
+
+    const summaryEntry: ContextEntry = {
+      id: this.generateId(),
+      content: result.summary,
+      role: 'assistant',
+      timestamp: new Date(),
+      tokenCount: result.compressedTokens,
+      priority: 'normal',
+      generation: maxGeneration + 1,
+    };
+
+    return summaryEntry;
+  }
+
+  /**
+   * 非同期圧縮（LLM要約付き）
+   * LLMクライアントが設定されている場合はLLM要約を使用
+   */
+  async compressAsync(): Promise<void> {
+    const totalTokens = this.getTotalTokens();
+    const threshold = this.maxTokens * this.compactThreshold;
+
+    if (totalTokens <= threshold) {
+      return;
+    }
+
+    // LLMクライアントがある場合はLLM要約を試行
+    if (this.llmClient && this.enableSummarization) {
+      await this.compressWithLLM(threshold);
+    } else {
+      // LLMがない場合は同期版にフォールバック
+      this.compact();
+    }
+  }
+
+  /**
+   * LLMを使用した圧縮
+   */
+  private async compressWithLLM(threshold: number): Promise<void> {
+    // 要約対象のエントリを特定（古い低優先度エントリ）
+    const summarizationConfig = this.summarizer.getConfig();
+    const keepCount = summarizationConfig.keepDetailedTurns;
+
+    if (this.entries.length <= keepCount) {
+      return;
+    }
+
+    const entriesToSummarize = this.entries.slice(0, this.entries.length - keepCount);
+
+    if (entriesToSummarize.length === 0) {
+      return;
+    }
+
+    try {
+      // LLM要約を生成
+      const result = await this.summarizer.summarizeHybrid(entriesToSummarize, this.llmClient);
+
+      if (result.summary.length > 0) {
+        // 要約エントリを作成
+        const maxGeneration = Math.max(...entriesToSummarize.map(e => e.generation), 1);
+        const summaryEntry: ContextEntry = {
+          id: this.generateId(),
+          content: result.summary,
+          role: 'assistant',
+          timestamp: new Date(),
+          tokenCount: result.compressedTokens,
+          priority: 'high',
+          generation: maxGeneration + 1,
+        };
+
+        // 古いエントリを削除し、要約を追加
+        const keptEntries = this.entries.slice(this.entries.length - keepCount);
+        this.entries = [summaryEntry, ...keptEntries];
+      }
+    } catch {
+      // LLM要約失敗時は同期版にフォールバック
+      this.compact();
+    }
+
+    // まだ閾値を超えている場合は追加で圧縮
+    if (this.getTotalTokens() > threshold) {
+      this.compact();
+    }
   }
 
   /**

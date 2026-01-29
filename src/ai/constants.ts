@@ -55,3 +55,19 @@ export const MODEL_COST = {
     output: 75.0,
   },
 } as const;
+
+/**
+ * コンテキストウィンドウ管理の設定
+ */
+export const CONTEXT_CONFIG = {
+  /** デフォルト最大トークン数 */
+  DEFAULT_MAX_TOKENS: 4096,
+  /** デフォルト最大ターン数 */
+  DEFAULT_MAX_TURNS: 20,
+  /** 要約を開始するターン数 */
+  SUMMARIZE_AFTER_TURNS: 10,
+  /** 詳細を保持するターン数 */
+  KEEP_DETAILED_TURNS: 5,
+  /** イベント要約の最大文字数 */
+  MAX_EVENT_SUMMARY_LENGTH: 500,
+} as const;

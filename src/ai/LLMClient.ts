@@ -33,6 +33,14 @@ export interface LLMRequestOptions {
 }
 
 /**
+ * 会話履歴のメッセージ
+ */
+export interface LLMConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/**
  * LLMレスポンス
  */
 export interface LLMResponse {
@@ -164,6 +172,80 @@ export class LLMClient {
       const estimatedCost = this.calculateCost(model, inputTokens, outputTokens);
 
       // 累計コストを更新
+      this.totalCost += estimatedCost;
+
+      return {
+        content,
+        model,
+        inputTokens,
+        outputTokens,
+        estimatedCost,
+        latencyMs,
+      };
+    } catch (error) {
+      if (error instanceof LLMError) {
+        throw error;
+      }
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          throw new LLMError('Request timed out', 'timeout', error);
+        }
+        if (error.message.includes('rate_limit')) {
+          throw new LLMError('Rate limit exceeded', 'rate_limit', error);
+        }
+        throw new LLMError(error.message, 'api_error', error);
+      }
+      throw new LLMError('Unknown error', 'unknown', error);
+    }
+  }
+
+  /**
+   * 会話履歴付きでメッセージを送信
+   */
+  async sendWithHistory(
+    systemPrompt: string,
+    history: LLMConversationMessage[],
+    userMessage: string,
+    options: LLMRequestOptions = {}
+  ): Promise<LLMResponse> {
+    const client = this.initClient();
+    const model = options.model ?? this.config.defaultModel;
+    const modelId = this.getModelId(model);
+    const timeout = options.timeout ?? this.config.timeout;
+    const maxTokens = options.maxTokens ?? 1024;
+    const temperature = options.temperature ?? 0.7;
+
+    const startTime = Date.now();
+
+    // 会話履歴と新しいメッセージを結合
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+      ...history,
+      { role: 'user', content: userMessage },
+    ];
+
+    try {
+      const response = await this.withTimeout(
+        client.messages.create({
+          model: modelId,
+          max_tokens: maxTokens,
+          temperature,
+          system: systemPrompt,
+          messages,
+        }),
+        timeout
+      );
+
+      const latencyMs = Date.now() - startTime;
+
+      const content = response.content
+        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+        .map(block => block.text)
+        .join('\n');
+
+      const inputTokens = response.usage.input_tokens;
+      const outputTokens = response.usage.output_tokens;
+      const estimatedCost = this.calculateCost(model, inputTokens, outputTokens);
+
       this.totalCost += estimatedCost;
 
       return {
