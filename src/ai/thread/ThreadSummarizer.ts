@@ -1,6 +1,8 @@
 // src/ai/thread/ThreadSummarizer.ts
 
 import type { ContextEntry } from './ContextWindowManager';
+import type { LLMClient } from '../LLMClient';
+import { CONTEXT_CONFIG } from '../constants';
 
 /**
  * 要約結果
@@ -17,6 +19,22 @@ export interface SummaryResult {
 }
 
 /**
+ * LLM要約設定
+ */
+export interface SummarizationConfig {
+  /** 要約を開始するターン数 */
+  summarizeAfterTurns: number;
+  /** 詳細を保持するターン数 */
+  keepDetailedTurns: number;
+  /** 要約に使用するモデル */
+  summaryModel: 'haiku' | 'sonnet' | 'opus';
+  /** イベント要約の最大文字数 */
+  maxEventSummaryLength: number;
+  /** LLM要約を有効にするか */
+  enableLLMSummarization: boolean;
+}
+
+/**
  * ThreadSummarizerの設定
  */
 export interface ThreadSummarizerConfig {
@@ -24,6 +42,8 @@ export interface ThreadSummarizerConfig {
   maxSummaryLength?: number;
   /** キーポイントの最大数 */
   maxKeyPoints?: number;
+  /** LLM要約設定 */
+  summarizationConfig?: Partial<SummarizationConfig>;
 }
 
 /**
@@ -33,6 +53,7 @@ export interface ThreadSummarizerConfig {
 export class ThreadSummarizer {
   private maxSummaryLength: number;
   private maxKeyPoints: number;
+  private summarizationConfig: SummarizationConfig;
 
   // ゲームアクションのパターン
   private static readonly ACTION_PATTERNS = [
@@ -67,6 +88,24 @@ export class ThreadSummarizer {
   constructor(config: ThreadSummarizerConfig = {}) {
     this.maxSummaryLength = config.maxSummaryLength ?? 500;
     this.maxKeyPoints = config.maxKeyPoints ?? 10;
+    this.summarizationConfig = {
+      summarizeAfterTurns:
+        config.summarizationConfig?.summarizeAfterTurns ?? CONTEXT_CONFIG.SUMMARIZE_AFTER_TURNS,
+      keepDetailedTurns:
+        config.summarizationConfig?.keepDetailedTurns ?? CONTEXT_CONFIG.KEEP_DETAILED_TURNS,
+      summaryModel: config.summarizationConfig?.summaryModel ?? 'haiku',
+      maxEventSummaryLength:
+        config.summarizationConfig?.maxEventSummaryLength ??
+        CONTEXT_CONFIG.MAX_EVENT_SUMMARY_LENGTH,
+      enableLLMSummarization: config.summarizationConfig?.enableLLMSummarization ?? true,
+    };
+  }
+
+  /**
+   * 設定を取得
+   */
+  getConfig(): SummarizationConfig {
+    return { ...this.summarizationConfig };
   }
 
   /**
@@ -226,5 +265,69 @@ export class ThreadSummarizer {
     const otherTokens = Math.ceil(otherChars / 4);
 
     return japaneseTokens + otherTokens;
+  }
+
+  /**
+   * LLMを使用して要約を生成
+   * エラー時はルールベース要約にフォールバック
+   */
+  async summarizeWithLLM(entries: ContextEntry[], llmClient: LLMClient): Promise<SummaryResult> {
+    if (entries.length === 0) {
+      return {
+        summary: '',
+        originalTokens: 0,
+        compressedTokens: 0,
+        entriesProcessed: 0,
+      };
+    }
+
+    const originalTokens = entries.reduce((sum, e) => sum + e.tokenCount, 0);
+
+    try {
+      // エントリを整形してLLMに渡す
+      const formattedEntries = entries
+        .map((e, i) => `[${i + 1}] ${e.role}: ${e.content}`)
+        .join('\n');
+
+      const systemPrompt = `あなたはカードゲーム「CODE OF JOKER」のAIアシスタントです。
+以下の会話履歴を簡潔に要約してください。
+重要な情報（ライフ変動、カード名、重要なアクション）は必ず含めてください。
+要約は${this.summarizationConfig.maxEventSummaryLength}文字以内で出力してください。
+出力は要約のみで、説明や前置きは不要です。`;
+
+      const userMessage = `以下の会話履歴を要約してください:\n\n${formattedEntries}`;
+
+      const response = await llmClient.send(systemPrompt, userMessage, {
+        model: this.summarizationConfig.summaryModel,
+        maxTokens: 256,
+        temperature: 0.3,
+      });
+
+      const summary = response.content.slice(0, this.summarizationConfig.maxEventSummaryLength);
+      const compressedTokens = this.estimateTokens(summary);
+
+      return {
+        summary,
+        originalTokens,
+        compressedTokens,
+        entriesProcessed: entries.length,
+      };
+    } catch {
+      // LLMエラー時はルールベースにフォールバック
+      return this.summarize(entries);
+    }
+  }
+
+  /**
+   * ハイブリッド要約（設定に基づきLLMまたはルールベースを使用）
+   */
+  async summarizeHybrid(entries: ContextEntry[], llmClient?: LLMClient): Promise<SummaryResult> {
+    // LLMが無効または未提供の場合はルールベース
+    if (!this.summarizationConfig.enableLLMSummarization || !llmClient) {
+      return this.summarize(entries);
+    }
+
+    // LLM要約を試行
+    return this.summarizeWithLLM(entries, llmClient);
   }
 }
