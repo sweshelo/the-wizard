@@ -1,35 +1,12 @@
 // src/ai/prompts/mulligan.ts
 
 import type { AIGameContext, CompactCard } from '../types';
+import mulliganPrompt from '../../../prompt/mulligan.md';
 
 /**
  * マリガン判断用のシステムプロンプト
  */
-export const MULLIGAN_SYSTEM_PROMPT = `あなたはCODE OF JOKERのAIプレイヤーです。
-マリガン（手札の引き直し）をするかどうか判断してください。
-
-## マリガンの判断基準
-
-良い手札の条件:
-- 序盤に出せる低コスト（1-3）ユニットがある
-- コスト分布が偏っていない
-- 高コスト（5以上）カードが多すぎない
-
-悪い手札の条件:
-- 序盤に何も出せない（低コストユニットがない）
-- 高コストカードばかり
-- 特定のコスト帯に偏っている
-
-## 応答形式
-
-必ず以下のJSON形式で応答してください:
-\`\`\`json
-{
-  "shouldMulligan": true または false,
-  "reason": "判断理由を簡潔に"
-}
-\`\`\`
-`;
+export const MULLIGAN_SYSTEM_PROMPT = mulliganPrompt;
 
 /**
  * マリガン判断用のユーザーメッセージを生成

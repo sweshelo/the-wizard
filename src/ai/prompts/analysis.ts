@@ -1,5 +1,8 @@
 // src/ai/prompts/analysis.ts
 import type { AIGameContext } from '../types';
+import earlyPhasePrompt from '../../../prompt/analysis/early.md';
+import midPhasePrompt from '../../../prompt/analysis/mid.md';
+import latePhasePrompt from '../../../prompt/analysis/late.md';
 
 /**
  * ゲームフェーズ
@@ -41,6 +44,45 @@ export interface ResourceAnalysis {
 }
 
 /**
+ * フェーズ情報をパース
+ */
+interface ParsedPhaseInfo {
+  description: string;
+  advice: string[];
+}
+
+/**
+ * フェーズ別Markdownをパース
+ */
+function parsePhaseMarkdown(markdown: string): ParsedPhaseInfo {
+  const lines = markdown.split('\n');
+  let description = '';
+  const advice: string[] = [];
+  let inAdviceSection = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('# ')) {
+      description = trimmed.slice(2).trim();
+    } else if (trimmed.startsWith('## アドバイス')) {
+      inAdviceSection = true;
+    } else if (trimmed.startsWith('## ')) {
+      inAdviceSection = false;
+    } else if (inAdviceSection && trimmed.startsWith('- ')) {
+      advice.push(trimmed.slice(2).trim());
+    }
+  }
+
+  return { description, advice };
+}
+
+// フェーズ情報をパース
+const earlyPhase = parsePhaseMarkdown(earlyPhasePrompt);
+const midPhase = parsePhaseMarkdown(midPhasePrompt);
+const latePhase = parsePhaseMarkdown(latePhasePrompt);
+
+/**
  * ゲームフェーズを分析
  */
 export function analyzeGamePhase(context: AIGameContext): GamePhase {
@@ -49,38 +91,23 @@ export function analyzeGamePhase(context: AIGameContext): GamePhase {
   if (turn <= 3) {
     return {
       name: 'early',
-      description: '序盤戦：基盤構築フェーズ',
-      advice: [
-        '低コストユニットで盤面を構築する',
-        'リソースを温存しつつ展開する',
-        '相手のデッキタイプを見極める',
-        'CPを効率的に使用する',
-      ],
+      description: earlyPhase.description,
+      advice: earlyPhase.advice,
     };
   }
 
   if (turn <= 7) {
     return {
       name: 'mid',
-      description: '中盤戦：主力展開フェーズ',
-      advice: [
-        '主力ユニットを展開する',
-        'トリガーゾーンを活用する',
-        '相手のキーカードに注意する',
-        'ライフ差を意識した攻防を行う',
-      ],
+      description: midPhase.description,
+      advice: midPhase.advice,
     };
   }
 
   return {
     name: 'late',
-    description: '終盤戦：決着フェーズ',
-    advice: [
-      'リーサルを意識する',
-      '残りリソースで最大効果を狙う',
-      '相手のジョーカーに警戒する',
-      '確実に勝てるなら押し切る',
-    ],
+    description: latePhase.description,
+    advice: latePhase.advice,
   };
 }
 

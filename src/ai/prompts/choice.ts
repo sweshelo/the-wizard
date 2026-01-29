@@ -1,37 +1,12 @@
 // src/ai/prompts/choice.ts
 
 import type { AIGameContext, CompactCard, CompactUnit } from '../types';
+import choicePrompt from '../../../prompt/choice.md';
 
 /**
  * 選択肢応答用のシステムプロンプト
  */
-export const CHOICE_SYSTEM_PROMPT = `あなたはCODE OF JOKERのAIプレイヤーです。
-提示された選択肢から最適なものを選んでください。
-
-## 選択の基準
-
-1. 盤面のアドバンテージを最大化する
-2. リスクを最小化する
-3. 長期的な勝利を見据える
-
-## 応答形式
-
-必ず以下のJSON形式で応答してください:
-\`\`\`json
-{
-  "selectedIds": ["選択したIDの配列"],
-  "reason": "選択理由を簡潔に"
-}
-\`\`\`
-
-選択をキャンセルする場合は空配列を返してください:
-\`\`\`json
-{
-  "selectedIds": [],
-  "reason": "キャンセル理由"
-}
-\`\`\`
-`;
+export const CHOICE_SYSTEM_PROMPT = choicePrompt;
 
 /**
  * オプション選択用のプロンプトを生成

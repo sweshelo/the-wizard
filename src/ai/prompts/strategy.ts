@@ -1,5 +1,11 @@
 // src/ai/prompts/strategy.ts
 
+import redStrategy from '../../../prompt/strategy/red.md';
+import yellowStrategy from '../../../prompt/strategy/yellow.md';
+import blueStrategy from '../../../prompt/strategy/blue.md';
+import greenStrategy from '../../../prompt/strategy/green.md';
+import purpleStrategy from '../../../prompt/strategy/purple.md';
+
 /**
  * デッキの色構成
  */
@@ -41,114 +47,52 @@ export function getColorName(color: number): string {
 }
 
 /**
+ * Markdownファイルから戦略情報をパース
+ */
+function parseStrategyMarkdown(markdown: string): ColorStrategy {
+  const lines = markdown.split('\n');
+  let name = '';
+  let playstyle = '';
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+  const tips: string[] = [];
+
+  let currentSection = '';
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // セクションヘッダーを検出
+    if (trimmed.startsWith('# ')) {
+      name = trimmed.slice(2).trim();
+    } else if (trimmed.startsWith('## ')) {
+      currentSection = trimmed.slice(3).trim();
+    } else if (trimmed.startsWith('- ')) {
+      const item = trimmed.slice(2).trim();
+      if (currentSection === '強み') {
+        strengths.push(item);
+      } else if (currentSection === '弱み') {
+        weaknesses.push(item);
+      } else if (currentSection === '戦略的アドバイス') {
+        tips.push(item);
+      }
+    } else if (currentSection === 'プレイスタイル' && trimmed.length > 0) {
+      playstyle = trimmed;
+    }
+  }
+
+  return { name, playstyle, strengths, weaknesses, tips };
+}
+
+/**
  * 色別戦略マップ
  */
 export const COLOR_STRATEGIES: Record<number, ColorStrategy> = {
-  1: {
-    name: '赤',
-    playstyle: 'アグレッシブな攻撃型。速攻と火力で相手を圧倒する。',
-    strengths: [
-      '高い攻撃力と貫通ダメージ',
-      'バーンダメージによる直接ライフ削り',
-      '速攻性能が高い',
-      '相手のユニットを除去しやすい',
-    ],
-    weaknesses: [
-      '長期戦に弱い',
-      '手札消費が激しい',
-      '大型ユニットへの対処が難しい場合がある',
-      '防御力が低め',
-    ],
-    tips: [
-      '序盤から積極的に攻撃し、ライフアドバンテージを取る',
-      'トリガーゾーンのバーンカードを活用',
-      '相手が体勢を整える前に決着を付ける',
-      'CPを温存せず、積極的にユニットを展開する',
-    ],
-  },
-  2: {
-    name: '黄',
-    playstyle: 'バランス型。柔軟な対応力と安定した展開が特徴。',
-    strengths: [
-      '汎用性の高いカードが多い',
-      '除去と展開のバランスが良い',
-      'コスト効率の良いユニットが多い',
-      'ライフ回復手段がある',
-    ],
-    weaknesses: ['特化した強みがない', '極端な戦略に押し負ける場合がある', '爆発力に欠ける'],
-    tips: [
-      '状況に応じて攻守を切り替える',
-      'リソース管理を意識する',
-      '相手のデッキタイプに合わせたプレイを心がける',
-      '手札の選択肢を多く持つ',
-    ],
-  },
-  3: {
-    name: '青',
-    playstyle: 'コントロール型。相手の行動を妨害し、アドバンテージを積み重ねる。',
-    strengths: [
-      'ドロー効果でリソースを確保',
-      'バウンス（手札に戻す）で盤面をリセット',
-      '相手の効果を無効化できる',
-      '長期戦に強い',
-    ],
-    weaknesses: [
-      '序盤の展開力が低い',
-      'ライフを削る速度が遅い',
-      '速攻デッキに押し切られやすい',
-      'CPコストが高いカードが多い',
-    ],
-    tips: [
-      '序盤は守りを固め、リソースを蓄える',
-      '相手のキーカードをバウンスで対処',
-      '手札を枯渇させない',
-      '終盤に大型ユニットで決着を付ける',
-    ],
-  },
-  4: {
-    name: '緑',
-    playstyle: '大型ユニット型。高BPのユニットで盤面を制圧する。',
-    strengths: [
-      '高BPのユニットが多い',
-      'BP強化効果が豊富',
-      '戦闘で負けにくい',
-      '盤面を制圧しやすい',
-    ],
-    weaknesses: [
-      'コストが重い',
-      '展開速度が遅い',
-      '除去効果に弱い',
-      '序盤で押し切られる場合がある',
-    ],
-    tips: [
-      '序盤は低コストユニットで時間を稼ぐ',
-      'CPが貯まったら大型ユニットを展開',
-      'BP強化でさらに戦闘力を上げる',
-      '盤面を取ったら一気に押し込む',
-    ],
-  },
-  5: {
-    name: '紫',
-    playstyle: '特殊効果型。独自のギミックで相手を翻弄する。',
-    strengths: [
-      '強力なデバフ効果',
-      '予測困難な効果が多い',
-      '相手の戦略を崩しやすい',
-      'コンボポテンシャルが高い',
-    ],
-    weaknesses: [
-      '効果に依存しすぎる',
-      '単体のユニットパワーが低め',
-      'コンボが決まらないと弱い',
-      '相手の対策に弱い',
-    ],
-    tips: [
-      'コンボパーツを揃えることを意識',
-      'デバフで相手の主力を無力化',
-      '効果のタイミングを見極める',
-      '相手の加護持ちに注意',
-    ],
-  },
+  1: parseStrategyMarkdown(redStrategy),
+  2: parseStrategyMarkdown(yellowStrategy),
+  3: parseStrategyMarkdown(blueStrategy),
+  4: parseStrategyMarkdown(greenStrategy),
+  5: parseStrategyMarkdown(purpleStrategy),
 };
 
 /**
