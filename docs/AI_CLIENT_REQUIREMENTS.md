@@ -1,9 +1,9 @@
 # CODE OF JOKER AI Client 要件定義書
 
-**バージョン:** 1.3
+**バージョン:** 1.4
 **作成日:** 2026-01-29
 **更新日:** 2026-01-29
-**ステータス:** ドラフト (スレッド管理・Knowledge Storage追加)
+**ステータス:** ドラフト (イベントバッチ戦略追加)
 
 ---
 
@@ -980,6 +980,128 @@ function appendEventToThread(
   if (thread.gameEvents.length > MAX_EVENTS) {
     compressOldEvents(thread);
   }
+}
+```
+
+#### 3.6.5.1 イベントバッチ戦略
+
+連続するイベントを効率的に処理するため、**判断トリガー方式**を採用する。
+タイマーは使用せず、特定のサーバーメッセージをトリガーとする。
+
+**問題:** イベントは連続して発生する
+```
+[evt] 効果A発動
+[evt] ユニットX破壊
+[evt] 効果B誘発         ← ここでAPI呼び出しは無駄
+[evt] ユニットY破壊
+[evt] 効果C誘発
+...
+[Operation] defrost     ← ここで判断が必要
+```
+
+**解決策:** freeze→defrost または Choices をトリガーとする
+
+```typescript
+interface EventBatcher {
+  // イベントバッファ
+  pendingEvents: GameEventEntry[];
+
+  // freeze状態追跡
+  isFrozen: boolean;
+}
+
+// API呼び出しトリガー
+type FlushTrigger =
+  | "choices"             // Choices イベント → 選択判断必要
+  | "operation_defrost"   // Operation(defrost) → 操作権回復
+  | "display_continue";   // DisplayEffect(Continue要求)
+
+function handleServerMessage(
+  msg: ServerMessage,
+  batcher: EventBatcher
+): void {
+  // 1. freeze検出
+  if (msg.type === "Operation" && msg.payload.type === "freeze") {
+    batcher.isFrozen = true;
+    return;
+  }
+
+  // 2. イベントはバッファに蓄積のみ (API呼び出しなし)
+  if (isGameEvent(msg)) {
+    batcher.pendingEvents.push(convertToGameEvent(msg));
+    return;
+  }
+
+  // 3. 判断トリガー検出
+  if (shouldFlush(msg, batcher)) {
+    const events = flush(batcher);
+    makeDecision(msg, events);
+  }
+}
+
+function shouldFlush(
+  msg: ServerMessage,
+  batcher: EventBatcher
+): boolean {
+  // Choices: 常にフラッシュ
+  if (msg.type === "Choices") {
+    return true;
+  }
+
+  // defrost: freeze中だった場合のみフラッシュ
+  if (msg.type === "Operation" && msg.payload.type === "defrost") {
+    if (batcher.isFrozen) {
+      batcher.isFrozen = false;
+      return true;
+    }
+  }
+
+  // DisplayEffect with Continue requirement
+  if (msg.type === "DisplayEffect" && requiresContinue(msg)) {
+    return true;
+  }
+
+  return false;
+}
+
+function flush(batcher: EventBatcher): GameEventEntry[] {
+  const events = [...batcher.pendingEvents];
+  batcher.pendingEvents = [];
+  return events;
+}
+```
+
+**フロー図:**
+```
+Server Messages                    Client State
+─────────────────                  ─────────────
+Operation(freeze)         →        isFrozen = true
+DisplayEffect(効果A)      →        pendingEvents.push()
+VisualEffect(破壊)        →        pendingEvents.push()
+DisplayEffect(効果B)      →        pendingEvents.push()
+...
+Operation(defrost)        →        flush() → makeDecision()
+                                   isFrozen = false
+
+または
+
+Choices(ブロック選択)     →        flush() → makeDecision()
+```
+
+**UI表示との連携:**
+- イベントはバッファに追加されると同時にUIにも表示
+- API呼び出しは判断トリガー時のみ
+- UIとAPIの更新タイミングを分離
+
+```typescript
+function handleGameEvent(event: ServerMessage): void {
+  const entry = convertToGameEvent(event);
+
+  // 1. バッファに追加 (API用)
+  batcher.pendingEvents.push(entry);
+
+  // 2. UIに即座に表示 (表示用)
+  chatStore.addGameEvent(entry);
 }
 ```
 
